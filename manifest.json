@@ -1,56 +1,21 @@
-# STREAMING_CHUNK: Defining service worker cache rules...
-```javascript:Service Worker:sw.js
-/* STREAMING_CHUNK: Initializing service worker cache... */
-const CACHE_NAME = 'swipewise-v1';
-const ASSETS = [
-  './',
-  './index.html',
-  './manifest.json',
-  'https://cdn.tailwindcss.com',
-  'https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap',
-  'https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js',
-  'https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js',
-  'https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.24.7/babel.min.js',
-  'https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js',
-  'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js',
-  'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js'
-];
-
-/* STREAMING_CHUNK: Installing and caching static assets... */
-self.addEventListener('install', (e) => {
-  e.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(ASSETS);
-    }).then(() => self.skipWaiting())
-  );
-});
-
-/* STREAMING_CHUNK: Activating and clearing outdated cache keys... */
-self.addEventListener('activate', (e) => {
-  e.waitUntil(
-    caches.keys().then((keys) => {
-      return Promise.all(
-        keys.map((key) => {
-          if (key !== CACHE_NAME) {
-            return caches.delete(key);
-          }
-        })
-      );
-    }).then(() => self.clients.claim())
-  );
-});
-
-/* STREAMING_CHUNK: Fetching assets with offline fallback capability... */
-self.addEventListener('fetch', (e) => {
-  e.respondWith(
-    caches.match(e.request).then((cachedResponse) => {
-      return cachedResponse || fetch(e.request).catch(() => {
-        // Fallback gracefully if resource is not found offline
-        return new Response("Offline Content Unavailable", {
-          status: 503,
-          statusText: "Service Unavailable"
-        });
-      });
-    })
-  );
-});
+{
+  "short_name": "SwipeWise",
+  "name": "SwipeWise: SG Credit Card Yield Optimizer",
+  "icons": [
+    {
+      "src": "https://placehold.co/192x192/020617/10b981?text=SwipeWise",
+      "type": "image/png",
+      "sizes": "192x192"
+    },
+    {
+      "src": "https://placehold.co/512x512/020617/10b981?text=SwipeWise",
+      "type": "image/png",
+      "sizes": "512x512"
+    }
+  ],
+  "start_url": "./index.html",
+  "background_color": "#020617",
+  "theme_color": "#020617",
+  "display": "standalone",
+  "orientation": "portrait"
+}
