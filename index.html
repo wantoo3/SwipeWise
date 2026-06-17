@@ -1,0 +1,1617 @@
+<!DOCTYPE html>
+<html lang="en" class="dark h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>SwipeWise | Singapore Credit Card Yield Optimizer</title>
+    
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        slate: {
+                            950: '#020617',
+                        }
+                    },
+                    animation: {
+                        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                        'spin-slow': 'spin 8s linear infinite',
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- React & ReactDOM CDNJS mirrors -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js" crossorigin></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js" crossorigin></script>
+    
+    <!-- Babel standalone for runtime compilation in standard iframe environments -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.24.7/babel.min.js"></script>
+
+    <!-- Firebase Compat SDKs (Stable CDNJS) -->
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #020617;
+            -webkit-tap-highlight-color: transparent;
+        }
+        /* Keep interface clean with custom modern thin scrollbars */
+        ::-webkit-scrollbar {
+            width: 5px;
+            height: 5px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #020617;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #1e293b;
+            border-radius: 99px;
+        }
+        /* Premium blur effects */
+        .glass-panel {
+            background: rgba(15, 23, 42, 0.7);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+        }
+        .safe-bottom {
+            padding-bottom: calc(env(safe-area-inset-bottom) + 4rem);
+        }
+    </style>
+</head>
+<body class="h-full overflow-hidden text-slate-100 selection:bg-emerald-500 selection:text-slate-950">
+
+    <div id="root" class="h-full"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useMemo } = React;
+
+        // Custom static definitions representing current 2026 Singapore Credit Cards
+        const EXCHANGE_RATES = {
+            SGD: 1.0,
+            MYR: 3.25,
+            IDR: 11500,
+            USD: 0.74,
+        };
+
+        const CARD_TEMPLATES = [
+            {
+                id: 'maybank-ff',
+                name: 'Maybank Friends & Family',
+                bank: 'Maybank',
+                type: 'Cashback',
+                color: 'from-amber-500 to-yellow-600',
+                desc: 'Up to 8% cashback on chosen preferred categories with $800 or $1,600 overall spending.',
+                whitelists: ['Dining', 'Groceries', 'Commute', 'Automotive', 'Entertainment', 'Kids & Pets', 'Telco & Streaming', 'MYR & IDR Spend'],
+                categories: ['Commute', 'Groceries', 'Dining', 'Telco & Streaming', 'Automotive'], 
+                statementDay: 1,
+                minSpendGates: [800, 1600],
+                rates: { tier1: 0.06, tier2: 0.08, base: 0.0022 },
+                caps: { tier1: 20, tier2: 30 } 
+            },
+            {
+                id: 'uob-one',
+                name: 'UOB One Card',
+                bank: 'UOB',
+                type: 'Cashback',
+                color: 'from-blue-600 to-indigo-700',
+                desc: 'Up to 10% on Grab, McDonald\'s, Shopee, SimplyGo & SP Group utilities + up to 3.33% quarterly baseline rebate.',
+                whitelists: ['Grab', 'McDonald\'s', 'Shopee', 'SimplyGo', 'SP Group', 'Groceries', 'Dining', 'Retail', 'Travel', 'Online Shopping'],
+                categories: ['Grab', 'McDonald\'s', 'Shopee', 'SimplyGo', 'SP Group'], 
+                statementDay: 1,
+                minSpendGates: [600, 1000, 2000],
+                rates: { partner: 0.10, base: 0.0333, fallback: 0.003 },
+                caps: { bonusPartnerCap: 600 } 
+            },
+            {
+                id: 'uob-lady-solitaire',
+                name: 'UOB Lady\'s Solitaire',
+                bank: 'UOB',
+                type: 'Miles',
+                color: 'from-pink-500 to-purple-700',
+                desc: 'Earn 4 Miles Per Dollar (MPD) on chosen preferred categories. S$2,000 monthly cap.',
+                whitelists: ['Dining', 'Travel', 'Beauty', 'Fashion', 'Family', 'Entertainment', 'Transport'],
+                categories: ['Dining', 'Beauty'], 
+                statementDay: 15,
+                monthlyCap: 2000,
+                rates: { preferred: 4.0, base: 0.4 } 
+            },
+            {
+                id: 'dcs-flexi',
+                name: 'DCS Flexi Card',
+                bank: 'DCS',
+                type: 'Cashback',
+                color: 'from-emerald-600 to-teal-800',
+                desc: '8% cashback on overall spend with $500 min spend, plus S$415 cap on Foreign Currency Spend.',
+                whitelists: ['Dining', 'Groceries', 'Retail', 'Online Shopping', 'Foreign Currency'],
+                categories: ['Foreign Currency'],
+                statementDay: 1,
+                minSpend: 500,
+                rates: { promo: 0.08, base: 0.003 },
+                caps: { fcyCap: 415 }
+            },
+            {
+                id: 'hsbc-liveplus',
+                name: 'HSBC Live+ Card',
+                bank: 'HSBC',
+                type: 'Cashback',
+                color: 'from-red-600 to-rose-700',
+                desc: '8% cashback on Dining, Groceries, Shopping & Entertainment. Capped at $250 per quarter.',
+                whitelists: ['Dining', 'Groceries', 'Online Shopping', 'Retail', 'Entertainment'],
+                categories: ['Dining', 'Groceries', 'Retail', 'Entertainment'],
+                statementDay: 1,
+                minSpend: 600,
+                rates: { preferred: 0.08, base: 0.003 },
+                caps: { quarterCap: 250 }
+            },
+            {
+                id: 'hsbc-rev',
+                name: 'HSBC Revolution',
+                bank: 'HSBC',
+                type: 'Miles',
+                color: 'from-rose-500 to-orange-600',
+                desc: '4 MPD on Online Purchases & Contactless Payments. No minimum spend requirement.',
+                whitelists: ['Online Shopping', 'Dining', 'Groceries', 'Travel', 'Commute'],
+                categories: ['Online Shopping', 'Dining', 'Groceries', 'Travel', 'Commute'],
+                statementDay: 1,
+                monthlyCap: 1000,
+                rates: { preferred: 4.0, base: 0.4 }
+            },
+            {
+                id: 'uob-preferred',
+                name: 'UOB Preferred Visa',
+                bank: 'UOB',
+                type: 'Miles',
+                color: 'from-cyan-600 to-blue-800',
+                desc: '4 MPD on mobile contactless and online transactions. Capped at $1,110 spend per month.',
+                whitelists: ['Online Shopping', 'Retail', 'Dining', 'Groceries', 'Commute'],
+                categories: ['Online Shopping', 'Retail', 'Dining', 'Groceries', 'Commute'],
+                statementDay: 1,
+                monthlyCap: 1110,
+                rates: { preferred: 4.0, base: 0.4 }
+            }
+        ];
+
+        const APP_ID = typeof __app_id !== 'undefined' ? __app_id : 'swipewise-public-tenant';
+        const configVar = typeof __firebase_config !== 'undefined' ? __firebase_config : null;
+        let firebaseApp = null;
+        let db = null;
+        let auth = null;
+        let isFirebaseActive = false;
+
+        if (configVar) {
+            try {
+                const parsedConfig = JSON.parse(configVar);
+                firebaseApp = firebase.initializeApp(parsedConfig);
+                db = firebase.firestore(firebaseApp);
+                auth = firebase.auth(firebaseApp);
+                isFirebaseActive = true;
+            } catch (err) {
+                console.error("Firebase Initialization Failed: ", err);
+            }
+        }
+
+        // Main App
+        function App() {
+            // STATE MANAGEMENT
+            const [user, setUser] = useState(null);
+            const [networkStatus, setNetworkStatus] = useState(isFirebaseActive ? 'Secure Cloud Active' : 'Offline Sandbox');
+            const [activeTab, setActiveTab] = useState('optimizer'); // optimizer, wallet, log, analysis, profile
+            
+            // Transaction Form State
+            const [amount, setAmount] = useState('');
+            const [currency, setCurrency] = useState('SGD');
+            const [category, setCategory] = useState('Dining');
+            const [merchant, setMerchant] = useState('');
+            const [txDate, setTxDate] = useState(new Date().toISOString().split('T')[0]);
+            const [selectedCardId, setSelectedCardId] = useState('');
+            const [editingId, setEditingId] = useState(null);
+
+            // User Profile Config state
+            const [wallet, setWallet] = useState([]);
+            const [transactions, setTransactions] = useState([]);
+            
+            // UI States
+            const [showOnboardModal, setShowOnboardModal] = useState(false);
+            const [toastMessage, setToastMessage] = useState(null);
+            const [isSubmitting, setIsSubmitting] = useState(false);
+            
+            // Auth Form States
+            const [authEmail, setAuthEmail] = useState('');
+            const [authPassword, setAuthPassword] = useState('');
+            const [isRegistering, setIsRegistering] = useState(false);
+            const [authError, setAuthError] = useState(null);
+
+            // Mock Data layer fallback for local sandbox instant evaluation
+            useEffect(() => {
+                const loadMockData = () => {
+                    const localWallet = localStorage.getItem('swipewise_wallet');
+                    const localTxs = localStorage.getItem('swipewise_transactions');
+                    if (localWallet) {
+                        setWallet(JSON.parse(localWallet));
+                    } else {
+                        // Seed default user wallet cards
+                        const defaultCards = [
+                            { ...CARD_TEMPLATES[0], isCustomized: true, selectedCategories: ['Commute', 'Groceries', 'Dining', 'Telco & Streaming', 'Automotive'], customCap: 375 },
+                            { ...CARD_TEMPLATES[1], isCustomized: true, selectedCategories: ['Grab', 'McDonald\'s', 'Shopee', 'SimplyGo', 'SP Group'], customCap: 600 },
+                            { ...CARD_TEMPLATES[2], isCustomized: true, selectedCategories: ['Dining', 'Beauty'], customCap: 2000 },
+                        ];
+                        setWallet(defaultCards);
+                        localStorage.setItem('swipewise_wallet', JSON.stringify(defaultCards));
+                    }
+
+                    if (localTxs) {
+                        setTransactions(JSON.parse(localTxs));
+                    } else {
+                        const defaultTxs = [
+                            { id: 'tx-1', desc: 'Sheng Siong Supermarket', amount: 84.50, currency: 'SGD', category: 'Groceries', cardId: 'maybank-ff', date: '2026-06-10' },
+                            { id: 'tx-2', desc: 'Grab ride home', amount: 24.00, currency: 'SGD', category: 'Commute', cardId: 'uob-one', date: '2026-06-12' },
+                            { id: 'tx-3', desc: 'Spa treatment', amount: 150.00, currency: 'SGD', category: 'Beauty', cardId: 'uob-lady-solitaire', date: '2026-06-15' },
+                        ];
+                        setTransactions(defaultTxs);
+                        localStorage.setItem('swipewise_transactions', JSON.stringify(defaultTxs));
+                    }
+                };
+
+                if (isFirebaseActive) {
+                    const initAuth = async () => {
+                        try {
+                            if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                                await auth.signInWithCustomToken(__initial_auth_token);
+                            } else {
+                                auth.onAuthStateChanged((firebaseUser) => {
+                                    if (firebaseUser) {
+                                        setUser(firebaseUser);
+                                        setNetworkStatus('Secure Cloud Active');
+                                        syncFirestoreData(firebaseUser.uid);
+                                    } else {
+                                        setUser(null);
+                                    }
+                                });
+                            }
+                        } catch (err) {
+                            console.error("Auth Failure: ", err);
+                            setNetworkStatus('Offline Sandbox');
+                            loadMockData();
+                        }
+                    };
+                    initAuth();
+                } else {
+                    setUser({ uid: 'mock-user-id', email: 'sandbox-guest@swipewise.sg', isAnonymous: true });
+                    loadMockData();
+                }
+            }, []);
+
+            const syncFirestoreData = (uid) => {
+                if (!db) return;
+                
+                const walletRef = db.collection('artifacts').doc(APP_ID).collection('users').doc(uid).collection('wallet');
+                const txRef = db.collection('artifacts').doc(APP_ID).collection('users').doc(uid).collection('transactions');
+
+                // Sync wallet live
+                walletRef.onSnapshot((snapshot) => {
+                    const loadedWallet = [];
+                    snapshot.forEach((doc) => {
+                        loadedWallet.push({ id: doc.id, ...doc.data() });
+                    });
+                    if (loadedWallet.length > 0) {
+                        setWallet(loadedWallet);
+                    } else {
+                        // Seed default database wallet for multi-tenancy
+                        const defaultCards = [
+                            { ...CARD_TEMPLATES[0], isCustomized: true, selectedCategories: ['Commute', 'Groceries', 'Dining', 'Telco & Streaming', 'Automotive'], customCap: 375 },
+                            { ...CARD_TEMPLATES[1], isCustomized: true, selectedCategories: ['Grab', 'McDonald\'s', 'Shopee', 'SimplyGo', 'SP Group'], customCap: 600 },
+                            { ...CARD_TEMPLATES[2], isCustomized: true, selectedCategories: ['Dining', 'Beauty'], customCap: 2000 },
+                        ];
+                        defaultCards.forEach(c => {
+                            walletRef.doc(c.id).set(c);
+                        });
+                    }
+                }, (error) => {
+                    console.error("Firestore wallet subscription error: ", error);
+                    setNetworkStatus('Sync Blocked');
+                });
+
+                // Sync transactions live
+                txRef.onSnapshot((snapshot) => {
+                    const loadedTxs = [];
+                    snapshot.forEach((doc) => {
+                        loadedTxs.push({ id: doc.id, ...doc.data() });
+                    });
+                    loadedTxs.sort((a, b) => new Date(b.date) - new Date(a.date));
+                    setTransactions(loadedTxs);
+                }, (error) => {
+                    console.error("Firestore transactions subscription error: ", error);
+                });
+            };
+
+            const triggerToast = (msg) => {
+                setToastMessage(msg);
+                setTimeout(() => setToastMessage(null), 3500);
+            };
+
+            const saveTransaction = async (e) => {
+                if (e) e.preventDefault();
+                if (!amount || isNaN(parseFloat(amount)) || parseFloat(amount) <= 0) {
+                    triggerToast('Provide a valid transaction amount.');
+                    return;
+                }
+
+                setIsSubmitting(true);
+                const sgdEquiv = parseFloat((parseFloat(amount) / EXCHANGE_RATES[currency]).toFixed(2));
+                const itemData = {
+                    desc: merchant || 'General Merchant',
+                    amount: parseFloat(amount),
+                    currency,
+                    sgdEquivalent: sgdEquiv,
+                    category,
+                    cardId: selectedCardId || (wallet[0]?.id || 'maybank-ff'),
+                    date: txDate,
+                };
+
+                if (isFirebaseActive && user && !user.isAnonymous) {
+                    const txRef = db.collection('artifacts').doc(APP_ID).collection('users').doc(user.uid).collection('transactions');
+                    try {
+                        if (editingId) {
+                            await txRef.doc(editingId).update(itemData);
+                            triggerToast('Ledger entry amended.');
+                        } else {
+                            await txRef.add(itemData);
+                            triggerToast('New ledger record synchronized.');
+                        }
+                        resetTxForm();
+                    } catch (err) {
+                        console.error("Firestore save error: ", err);
+                        triggerToast('Cloud sync failure. Saved locally instead.');
+                    }
+                } else {
+                    let updatedTxs = [...transactions];
+                    if (editingId) {
+                        updatedTxs = updatedTxs.map(t => t.id === editingId ? { ...t, ...itemData } : t);
+                        triggerToast('Local amendment recorded.');
+                    } else {
+                        const newId = 'tx-' + Date.now();
+                        updatedTxs.unshift({ id: newId, ...itemData });
+                        triggerToast('Local entry created.');
+                    }
+                    setTransactions(updatedTxs);
+                    localStorage.setItem('swipewise_transactions', JSON.stringify(updatedTxs));
+                    resetTxForm();
+                }
+                setIsSubmitting(false);
+            };
+
+            const deleteTransaction = async (id) => {
+                if (isFirebaseActive && user && !user.isAnonymous) {
+                    try {
+                        await db.collection('artifacts').doc(APP_ID).collection('users').doc(user.uid).collection('transactions').doc(id).delete();
+                        triggerToast('Record safely expunged.');
+                    } catch (err) {
+                        console.error(err);
+                    }
+                } else {
+                    const filtered = transactions.filter(t => t.id !== id);
+                    setTransactions(filtered);
+                    localStorage.setItem('swipewise_transactions', JSON.stringify(filtered));
+                    triggerToast('Record safely expunged.');
+                }
+            };
+
+            const triggerEdit = (item) => {
+                setEditingId(item.id);
+                setAmount(item.amount.toString());
+                setCurrency(item.currency);
+                setCategory(item.category);
+                setMerchant(item.desc);
+                setTxDate(item.date);
+                setSelectedCardId(item.cardId);
+                setActiveTab('log'); 
+            };
+
+            const resetTxForm = () => {
+                setEditingId(null);
+                setAmount('');
+                setMerchant('');
+                setTxDate(new Date().toISOString().split('T')[0]);
+            };
+
+            const addCardToWallet = async (template) => {
+                const isAlreadyAdded = wallet.some(c => c.id === template.id);
+                if (isAlreadyAdded) {
+                    triggerToast('This card is already active in your wallet.');
+                    return;
+                }
+
+                const setup = {
+                    ...template,
+                    isCustomized: true,
+                    selectedCategories: [...template.categories],
+                    statementDay: template.statementDay || 1,
+                    customCap: template.monthlyCap || template.caps?.tier1 || 375
+                };
+
+                if (isFirebaseActive && user && !user.isAnonymous) {
+                    try {
+                        await db.collection('artifacts').doc(APP_ID).collection('users').doc(user.uid).collection('wallet').doc(setup.id).set(setup);
+                        triggerToast(`${setup.name} integrated to secure cloud profile!`);
+                    } catch (err) {
+                        console.error(err);
+                    }
+                } else {
+                    const nextWallet = [...wallet, setup];
+                    setWallet(nextWallet);
+                    localStorage.setItem('swipewise_wallet', JSON.stringify(nextWallet));
+                    triggerToast(`${setup.name} added to sandbox wallet!`);
+                }
+                setShowOnboardModal(false);
+            };
+
+            const removeCardFromWallet = async (cardId) => {
+                if (wallet.length <= 1) {
+                    triggerToast('A minimum of one active card is required to perform calculations.');
+                    return;
+                }
+                if (isFirebaseActive && user && !user.isAnonymous) {
+                    try {
+                        await db.collection('artifacts').doc(APP_ID).collection('users').doc(user.uid).collection('wallet').doc(cardId).delete();
+                        triggerToast('Card isolated from cloud profile.');
+                    } catch (err) {
+                        console.error(err);
+                    }
+                } else {
+                    const filtered = wallet.filter(c => c.id !== cardId);
+                    setWallet(filtered);
+                    localStorage.setItem('swipewise_wallet', JSON.stringify(filtered));
+                    triggerToast('Card isolated from local profile.');
+                }
+            };
+
+            const updateCardSetup = async (cardId, updatedKeys) => {
+                const nextWallet = wallet.map(c => {
+                    if (c.id === cardId) {
+                        return { ...c, ...updatedKeys };
+                    }
+                    return c;
+                });
+
+                if (isFirebaseActive && user && !user.isAnonymous) {
+                    try {
+                        await db.collection('artifacts').doc(APP_ID).collection('users').doc(user.uid).collection('wallet').doc(cardId).update(updatedKeys);
+                        triggerToast('Preferences synced on cloud.');
+                    } catch (err) {
+                        console.error(err);
+                    }
+                } else {
+                    setWallet(nextWallet);
+                    localStorage.setItem('swipewise_wallet', JSON.stringify(nextWallet));
+                    triggerToast('Preferences cached locally.');
+                }
+            };
+
+            // AUTHENTICATION SECURITY
+            const handleAuth = async (e) => {
+                e.preventDefault();
+                setAuthError(null);
+                if (!authEmail || !authPassword) {
+                    setAuthError('Email and credentials must be specified.');
+                    return;
+                }
+                try {
+                    if (isRegistering) {
+                        await auth.createUserWithEmailAndPassword(authEmail, authPassword);
+                        triggerToast('Account registered successfully!');
+                    } else {
+                        await auth.signInWithEmailAndPassword(authEmail, authPassword);
+                        triggerToast('Authenticated successfully!');
+                    }
+                } catch (err) {
+                    setAuthError(err.message);
+                }
+            };
+
+            const handleGoogleLogin = async () => {
+                setAuthError(null);
+                const provider = new firebase.auth.GoogleAuthProvider();
+                try {
+                    await auth.signInWithPopup(provider);
+                    triggerToast('Successfully authenticated via Google Cloud!');
+                } catch (err) {
+                    setAuthError(err.message);
+                }
+            };
+
+            const handleLogout = async () => {
+                if (isFirebaseActive) {
+                    await auth.signOut();
+                }
+                setUser(null);
+                triggerToast('Decoupled tenant lock successfully.');
+            };
+
+            // Billing statements calculations helper
+            const getStatementRange = (statementDay, referenceDate = new Date()) => {
+                const ref = new Date(referenceDate);
+                const year = ref.getFullYear();
+                const month = ref.getMonth(); 
+                
+                let start, end;
+                if (ref.getDate() >= statementDay) {
+                    start = new Date(year, month, statementDay);
+                    end = new Date(year, month + 1, statementDay - 1);
+                } else {
+                    start = new Date(year, month - 1, statementDay);
+                    end = new Date(year, month, statementDay - 1);
+                }
+                return { start, end };
+            };
+
+            // Calculate card-level aggregates live in background state
+            const cardAggregates = useMemo(() => {
+                const aggregates = {};
+                
+                wallet.forEach(card => {
+                    const { start, end } = getStatementRange(card.statementDay || 1);
+                    
+                    const txInCycle = transactions.filter(t => {
+                        if (t.cardId !== card.id) return false;
+                        const d = new Date(t.date);
+                        return d >= start && d <= end;
+                    });
+
+                    const totalCycleSpend = txInCycle.reduce((acc, curr) => acc + (curr.sgdEquivalent || curr.amount), 0);
+
+                    const categorySpend = {};
+                    txInCycle.forEach(t => {
+                        categorySpend[t.category] = (categorySpend[t.category] || 0) + (t.sgdEquivalent || t.amount);
+                    });
+
+                    aggregates[card.id] = {
+                        cycleStart: start,
+                        cycleEnd: end,
+                        totalCycleSpend,
+                        categorySpend,
+                        txCount: txInCycle.length
+                    };
+                });
+
+                return aggregates;
+            }, [wallet, transactions]);
+
+            // PRECISION REWARDS ENGINE
+            const yieldCalculations = useMemo(() => {
+                if (wallet.length === 0) return [];
+
+                const testAmount = parseFloat(amount) || 100;
+                const testSgd = testAmount / EXCHANGE_RATES[currency];
+                const activeCategory = category;
+
+                const results = wallet.map(card => {
+                    const agg = cardAggregates[card.id] || { totalCycleSpend: 0, categorySpend: {} };
+                    const currentCategorySpend = agg.categorySpend[activeCategory] || 0;
+                    
+                    let rewardRate = 0;
+                    let rewardType = card.type; 
+                    let reason = "";
+                    let projectedReward = 0;
+
+                    if (card.id === 'maybank-ff') {
+                        const isPreferred = card.selectedCategories?.includes(activeCategory);
+                        const futureSpend = agg.totalCycleSpend + testSgd;
+
+                        let rate = card.rates.base; 
+                        let isHighTier = false;
+
+                        if (futureSpend >= 1600) {
+                            rate = card.rates.tier2;
+                            isHighTier = true;
+                        } else if (futureSpend >= 800) {
+                            rate = card.rates.tier1;
+                        }
+
+                        if (isPreferred) {
+                            const capLimit = card.customCap || (isHighTier ? card.caps.tier2 : card.caps.tier1);
+                            const currentCashbackEarned = currentCategorySpend * rate;
+                            const remainingCap = Math.max(0, capLimit - currentCashbackEarned);
+                            
+                            if (remainingCap <= 0) {
+                                rewardRate = card.rates.base * 100; 
+                                reason = `Category cashback ceiling of S$${capLimit} breached. Reverted to standard 0.22% fallback.`;
+                            } else {
+                                const potentialReward = testSgd * rate;
+                                if (potentialReward <= remainingCap) {
+                                    rewardRate = rate * 100;
+                                    reason = `Preferred category. Securing high-tier ${rewardRate}% cashback. Headroom left: S$${(remainingCap / rate - testSgd).toFixed(2)}.`;
+                                } else {
+                                    const highRateAmount = remainingCap / rate;
+                                    const baseRateAmount = testSgd - highRateAmount;
+                                    const combinedReward = remainingCap + (baseRateAmount * card.rates.base);
+                                    rewardRate = (combinedReward / testSgd) * 100;
+                                    reason = `Partially capped! First S$${highRateAmount.toFixed(2)} earns ${(rate*100)}%, balance earns base 0.22%.`;
+                                }
+                            }
+                        } else {
+                            rewardRate = card.rates.base * 100;
+                            reason = `Outside chosen 5 preferred categories. Awarding standard base rate 0.22%.`;
+                        }
+                        projectedReward = (testSgd * (rewardRate / 100));
+
+                    } else if (card.id === 'uob-one') {
+                        const isPartner = card.selectedCategories?.includes(activeCategory) || 
+                                          ['Grab', 'McDonald\'s', 'Shopee', 'SimplyGo', 'SP Group'].includes(activeCategory);
+                        
+                        const totalPartnerSpend = Object.keys(agg.categorySpend)
+                            .filter(cat => ['Grab', 'McDonald\'s', 'Shopee', 'SimplyGo', 'SP Group'].includes(cat))
+                            .reduce((sum, cat) => sum + agg.categorySpend[cat], 0);
+
+                        if (isPartner) {
+                            const remainingBonusCap = Math.max(0, 600 - totalPartnerSpend);
+                            if (remainingBonusCap <= 0) {
+                                rewardRate = card.rates.fallback * 100;
+                                reason = `Partner bonus ceiling of S$600 exceeded. Falling back to base card rewards.`;
+                            } else if (testSgd <= remainingBonusCap) {
+                                rewardRate = card.rates.partner * 100;
+                                reason = `High yield merchant: Earns premium ${rewardRate}% rebate!`;
+                            } else {
+                                const highAmount = remainingBonusCap;
+                                const baseAmount = testSgd - highAmount;
+                                const combined = (highAmount * card.rates.partner) + (baseAmount * card.rates.fallback);
+                                rewardRate = (combined / testSgd) * 100;
+                                reason = `Partial limit. First S$${highAmount.toFixed(2)} earns 10%, balance gets base rates.`;
+                            }
+                        } else {
+                            rewardRate = card.rates.base * 100;
+                            reason = `General spend. Earns base 3.33% rebate (subject to quarterly spend goals).`;
+                        }
+                        projectedReward = (testSgd * (rewardRate / 100));
+
+                    } else if (card.id === 'uob-lady-solitaire') {
+                        const isPreferred = card.selectedCategories?.includes(activeCategory);
+                        const totalSolSpend = agg.totalCycleSpend;
+
+                        if (isPreferred) {
+                            const remainingCap = Math.max(0, card.customCap - totalSolSpend);
+                            if (remainingCap <= 0) {
+                                rewardRate = card.rates.base;
+                                reason = `Lady's Solitaire preferred spending threshold of S$${card.customCap} completed. Base rate of 0.4 MPD applies.`;
+                            } else if (testSgd <= remainingCap) {
+                                rewardRate = card.rates.preferred;
+                                reason = `Preferred category. 4.0 MPD active (S$${(remainingCap - testSgd).toFixed(0)} cap headroom left).`;
+                            } else {
+                                const highAmount = remainingCap;
+                                const baseAmount = testSgd - highAmount;
+                                rewardRate = ((highAmount * card.rates.preferred) + (baseAmount * card.rates.base)) / testSgd;
+                                reason = `Crosses monthly cap. S$${highAmount.toFixed(2)} receives 4.0 MPD, balance gets base.`;
+                            }
+                        } else {
+                            rewardRate = card.rates.base;
+                            reason = `Non-preferred category. Earns baseline 0.4 MPD.`;
+                        }
+                        projectedReward = testSgd * rewardRate;
+
+                    } else if (card.id === 'dcs-flexi') {
+                        const isFcy = activeCategory === 'Foreign Currency' || currency !== 'SGD';
+                        const currentFcySpend = agg.categorySpend['Foreign Currency'] || 0;
+
+                        if (isFcy) {
+                            const remaining = Math.max(0, 415 - currentFcySpend);
+                            if (remaining <= 0) {
+                                rewardRate = card.rates.base * 100;
+                                reason = `Foreign currency bonus cap ($415) surpassed. Base rate of 0.3% applies.`;
+                            } else if (testSgd <= remaining) {
+                                rewardRate = card.rates.promo * 100;
+                                reason = `FCY transaction matching DCS Flexi 8% yield rate.`;
+                            } else {
+                                const combined = (remaining * card.rates.promo) + ((testSgd - remaining) * card.rates.base);
+                                rewardRate = (combined / testSgd) * 100;
+                                reason = `FCY cap split. S$${remaining.toFixed(2)} earns 8%, balance earns base 0.3%.`;
+                            }
+                        } else {
+                            rewardRate = card.rates.promo * 100;
+                            reason = `Qualifies for overall 8% cashback campaign (requires S$500 monthly threshold).`;
+                        }
+                        projectedReward = (testSgd * (rewardRate / 100));
+
+                    } else if (card.id === 'hsbc-liveplus') {
+                        const isMatch = card.selectedCategories?.includes(activeCategory);
+                        if (isMatch) {
+                            rewardRate = card.rates.preferred * 100;
+                            reason = `Valid category. Enjoys HSBC Live+ 8% high yield bonus rebate!`;
+                        } else {
+                            rewardRate = card.rates.base * 100;
+                            reason = `General category. 0.3% base rebate applies.`;
+                        }
+                        projectedReward = (testSgd * (rewardRate / 100));
+
+                    } else if (card.id === 'hsbc-rev' || card.id === 'uob-preferred') {
+                        const isOnlineOrPay = card.selectedCategories?.includes(activeCategory);
+                        const limit = card.monthlyCap;
+                        const currentSpend = agg.totalCycleSpend;
+
+                        if (isOnlineOrPay) {
+                            const remaining = Math.max(0, limit - currentSpend);
+                            if (remaining <= 0) {
+                                rewardRate = card.rates.base;
+                                reason = `Cycle spending threshold of S$${limit} exceeded. Base 0.4 MPD is awarded.`;
+                            } else if (testSgd <= remaining) {
+                                rewardRate = card.rates.preferred;
+                                reason = `Category match. Smart yields of 4.0 MPD active!`;
+                            } else {
+                                rewardRate = ((remaining * card.rates.preferred) + ((testSgd - remaining) * card.rates.base)) / testSgd;
+                                reason = `Crosses monthly bonus limit. High yield applies to first S$${remaining.toFixed(2)}.`;
+                            }
+                        } else {
+                            rewardRate = card.rates.base;
+                            reason = `Non-bonused transaction type. Baseline 0.4 MPD.`;
+                        }
+                        projectedReward = testSgd * rewardRate;
+                    }
+
+                    const normalizedScore = rewardType === 'Miles' ? (projectedReward * 0.015) : projectedReward;
+
+                    return {
+                        card,
+                        rewardRate,
+                        rewardType,
+                        projectedReward,
+                        reason,
+                        normalizedScore
+                    };
+                });
+
+                return results.sort((a, b) => b.normalizedScore - a.normalizedScore);
+            }, [wallet, amount, currency, category, cardAggregates]);
+
+            const performFastLog = (cardResult) => {
+                setSelectedCardId(cardResult.card.id);
+                setMerchant(`SwipeWise: ${category}`);
+                setAmount(amount || "100");
+                triggerToast(`Loaded values for ${cardResult.card.name}. Saving configured!`);
+                setActiveTab('log');
+            };
+
+            return (
+                <div class="flex flex-col h-full bg-slate-950 font-sans select-none pb-safe">
+                    
+                    {/* Header bar */}
+                    <header class="flex items-center justify-between px-4 py-4 border-b border-slate-900 bg-slate-950/80 backdrop-blur-md sticky top-0 z-50">
+                        <div class="flex items-center gap-2.5">
+                            <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-emerald-400 via-teal-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-emerald-500/10">
+                                <span class="text-white font-extrabold text-lg">W</span>
+                            </div>
+                            <div>
+                                <h1 class="text-base font-extrabold tracking-tight text-white flex items-center gap-2">
+                                    SwipeWise
+                                    <span class="text-[10px] bg-emerald-500/10 text-emerald-400 px-2 py-0.5 rounded-full font-semibold border border-emerald-500/20">Active PWA</span>
+                                </h1>
+                                <p class="text-[10px] text-slate-400">Singapore Smart Credit Engine</p>
+                            </div>
+                        </div>
+
+                        {/* Connection Dot Badge */}
+                        <div class="flex items-center gap-2 bg-slate-900/60 px-3 py-1 rounded-xl border border-slate-800">
+                            <span class={`w-2 h-2 rounded-full ${networkStatus.includes('Cloud') ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'} inline-block`}></span>
+                            <span class="text-[10px] font-semibold text-slate-300">{networkStatus}</span>
+                        </div>
+                    </header>
+
+                    {/* Toast Alert Drawer */}
+                    {toastMessage && (
+                        <div class="fixed top-18 left-4 right-4 z-50 glass-panel bg-slate-900/95 border-emerald-500/30 text-emerald-200 px-4 py-3.5 rounded-2xl shadow-xl flex items-center gap-3 animate-fade-in-down">
+                            <span class="text-emerald-400">⚡</span>
+                            <p class="text-xs font-semibold">{toastMessage}</p>
+                        </div>
+                    )}
+
+                    {/* Body scroll area */}
+                    <main class="flex-1 overflow-y-auto pb-24">
+                        
+                        {/* Profile Setup / Authenticated views */}
+                        {!user ? (
+                            <div class="p-6 flex flex-col items-center justify-center min-h-[75vh] text-center">
+                                <div class="w-16 h-16 rounded-3xl bg-gradient-to-br from-slate-800 to-slate-900 flex items-center justify-center text-3xl mb-5 border border-slate-800 shadow-xl">
+                                    🔑
+                                </div>
+                                <h2 class="text-xl font-extrabold text-white mb-2">Secure Cloud Optimizer Profile</h2>
+                                <p class="text-slate-400 text-xs max-w-xs mb-6">
+                                    SwipeWise safely partitions your credit cards, customized limits, and spending logs with Google & email isolation boundaries.
+                                </p>
+
+                                <form onSubmit={handleAuth} class="w-full max-w-sm space-y-4">
+                                    <div>
+                                        <label class="block text-[10px] font-bold text-slate-400 mb-1.5 uppercase tracking-wider text-left">EMAIL ADDRESS</label>
+                                        <input 
+                                            type="email" 
+                                            value={authEmail} 
+                                            onChange={(e) => setAuthEmail(e.target.value)} 
+                                            class="w-full px-4 py-3 rounded-xl bg-slate-900/80 border border-slate-800 text-white text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none transition-all"
+                                            placeholder="you@domain.sg"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label class="block text-[10px] font-bold text-slate-400 mb-1.5 uppercase tracking-wider text-left">SECURE PASSWORD</label>
+                                        <input 
+                                            type="password" 
+                                            value={authPassword} 
+                                            onChange={(e) => setAuthPassword(e.target.value)} 
+                                            class="w-full px-4 py-3 rounded-xl bg-slate-900/80 border border-slate-800 text-white text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none transition-all"
+                                            placeholder="••••••••"
+                                        />
+                                    </div>
+
+                                    {authError && (
+                                        <p class="text-xs text-red-400 bg-red-950/40 p-3 rounded-xl border border-red-900/40 text-left">
+                                            ⚠️ {authError}
+                                        </p>
+                                    )}
+
+                                    <button 
+                                        type="submit" 
+                                        class="w-full py-3.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-slate-950 font-extrabold transition-all transform active:scale-95 text-xs shadow-lg shadow-emerald-500/10 uppercase tracking-widest"
+                                    >
+                                        {isRegistering ? 'Register Secured Vault' : 'Sign In To Vault'}
+                                    </button>
+
+                                    <div class="flex items-center justify-between text-[11px] text-slate-400 pt-1">
+                                        <button 
+                                            type="button" 
+                                            onClick={() => setIsRegistering(!isRegistering)}
+                                            class="underline hover:text-emerald-400"
+                                        >
+                                            {isRegistering ? 'Have an account? Log in' : 'Create new secure account'}
+                                        </button>
+                                        
+                                        <button 
+                                            type="button" 
+                                            onClick={() => {
+                                                setUser({ uid: 'mock-user', email: 'sandbox-guest@swipewise.sg', isAnonymous: true });
+                                                triggerToast('Authorized local guest environment.');
+                                            }}
+                                            class="text-amber-400 hover:underline font-semibold"
+                                        >
+                                            Try Local Sandbox
+                                        </button>
+                                    </div>
+                                </form>
+
+                                <div class="w-full max-w-sm mt-8 pt-6 border-t border-slate-900">
+                                    <button 
+                                        onClick={handleGoogleLogin}
+                                        class="w-full py-3 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-white font-semibold transition-all flex items-center justify-center gap-3 text-xs active:scale-95 shadow-sm"
+                                    >
+                                        <svg class="w-4 h-4" viewBox="0 0 24 24" width="100%" height="100%" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                            <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+                                            <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+                                            <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l3.66-2.85z" fill="#FBBC05"/>
+                                            <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.85c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+                                        </svg>
+                                        Authorize with Google Profile
+                                    </button>
+                                </div>
+                            </div>
+                        ) : (
+                            <div>
+                                {/* TAB 1: PRECISION YIELD OPTIMIZER */}
+                                {activeTab === 'optimizer' && (
+                                    <div class="px-4 py-5 space-y-6">
+                                        
+                                        <div class="glass-panel p-5 rounded-3xl space-y-4 shadow-xl">
+                                            <div class="flex items-center justify-between mb-1">
+                                                <h3 class="text-xs font-bold tracking-wider text-slate-300 uppercase">Live Calculator Engine</h3>
+                                                <span class="text-[10px] text-emerald-400 font-bold bg-emerald-500/10 px-2 py-0.5 rounded">Adaptive Math</span>
+                                            </div>
+
+                                            <div class="grid grid-cols-2 gap-3.5">
+                                                <div>
+                                                    <label class="block text-[10px] font-bold text-slate-400 mb-1.5 uppercase tracking-wide">Category</label>
+                                                    <select 
+                                                        value={category} 
+                                                        onChange={(e) => setCategory(e.target.value)}
+                                                        class="w-full px-3 py-3 rounded-xl bg-slate-950 border border-slate-800 text-white font-medium text-xs focus:ring-1 focus:ring-emerald-500 focus:outline-none"
+                                                    >
+                                                        <option value="Dining">Dining & Food Delivery</option>
+                                                        <option value="Groceries">Groceries / Marts</option>
+                                                        <option value="Commute">Commute / SimplyGo</option>
+                                                        <option value="Grab">Grab Rides & Delivery</option>
+                                                        <option value="McDonald's">McDonald's</option>
+                                                        <option value="Shopee">Shopee / Online Marts</option>
+                                                        <option value="SP Group">SP Utilities</option>
+                                                        <option value="Automotive">Automotive & Petrol</option>
+                                                        <option value="Telco & Streaming">Telco & Streaming</option>
+                                                        <option value="Online Shopping">Online Shopping</option>
+                                                        <option value="Beauty">Beauty & Spas</option>
+                                                        <option value="Retail">Retail & Fashion</option>
+                                                        <option value="Travel">Travel & Flight Booking</option>
+                                                    </select>
+                                                </div>
+
+                                                <div>
+                                                    <label class="block text-[10px] font-bold text-slate-400 mb-1.5 uppercase tracking-wide">Currency</label>
+                                                    <select 
+                                                        value={currency} 
+                                                        onChange={(e) => setCurrency(e.target.value)}
+                                                        class="w-full px-3 py-3 rounded-xl bg-slate-950 border border-slate-800 text-white font-medium text-xs focus:ring-1 focus:ring-emerald-500 focus:outline-none"
+                                                    >
+                                                        <option value="SGD">SGD (S$)</option>
+                                                        <option value="MYR">MYR (RM)</option>
+                                                        <option value="IDR">IDR (Rp)</option>
+                                                        <option value="USD">USD ($)</option>
+                                                    </select>
+                                                </div>
+                                            </div>
+
+                                            <div>
+                                                <label class="block text-[10px] font-bold text-slate-400 mb-1.5 uppercase tracking-wide">Transaction Amount ({currency})</label>
+                                                <div class="relative">
+                                                    <input 
+                                                        type="number" 
+                                                        value={amount}
+                                                        onChange={(e) => setAmount(e.target.value)}
+                                                        placeholder="100.00"
+                                                        class="w-full pl-8 pr-4 py-3 rounded-xl bg-slate-950 border border-slate-800 text-white font-bold text-xs focus:ring-1 focus:ring-emerald-500 focus:outline-none"
+                                                    />
+                                                    <span class="absolute left-3.5 top-3.5 text-xs font-bold text-slate-500">$</span>
+                                                </div>
+                                                {currency !== 'SGD' && amount && (
+                                                    <p class="text-[10px] text-slate-400 mt-1.5 flex items-center gap-1">
+                                                        <span>ℹ️</span>
+                                                        <span>Equivalent S$ {(parseFloat(amount) / EXCHANGE_RATES[currency]).toFixed(2)} SGD conversion calculated.</span>
+                                                    </p>
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        {/* Recommendation Cards Stack */}
+                                        <div class="space-y-4">
+                                            <div class="flex items-center justify-between px-1">
+                                                <h2 class="text-xs font-bold text-slate-400 tracking-wider uppercase">Optimized Priority Hierarchy</h2>
+                                                <span class="text-[10px] text-slate-500 font-bold uppercase">{wallet.length} Options Loaded</span>
+                                            </div>
+
+                                            {yieldCalculations.length === 0 ? (
+                                                <div class="glass-panel p-8 rounded-2xl text-center text-slate-400 text-xs leading-relaxed">
+                                                    Setup your personal credit profile first. Click the "Wallet" tab at the bottom menu.
+                                                </div>
+                                            ) : (
+                                                <div class="space-y-4">
+                                                    {yieldCalculations.map((item, idx) => (
+                                                        <div key={item.card.id} class={`glass-panel p-4.5 rounded-3xl relative overflow-hidden transition-transform active:scale-[0.99] border-l-4 ${idx === 0 ? 'border-emerald-500 bg-slate-900/60' : 'border-slate-800'}`}>
+                                                            {idx === 0 && (
+                                                                <span class="absolute top-0 right-0 bg-emerald-500 text-slate-950 text-[9px] px-3.5 py-1 rounded-bl-xl font-black uppercase tracking-wider">
+                                                                    Rank 1 - Swipe Best Option
+                                                                </span>
+                                                            )}
+
+                                                            <div class="flex items-start justify-between">
+                                                                <div>
+                                                                    <div class="flex items-center gap-2 mb-1.5">
+                                                                        <span class="text-xs font-bold text-white">{item.card.name}</span>
+                                                                        <span class="text-[9px] bg-slate-800 text-slate-300 px-1.5 py-0.5 rounded font-medium">{item.card.bank}</span>
+                                                                    </div>
+                                                                    <div class="text-xl font-extrabold text-white flex items-baseline gap-1">
+                                                                        {item.rewardType === 'Cashback' ? (
+                                                                            <span>{item.rewardRate.toFixed(1)}% <span class="text-xs font-semibold text-slate-400">Cashback</span></span>
+                                                                        ) : (
+                                                                            <span>{item.rewardRate.toFixed(1)} <span class="text-xs font-semibold text-slate-400">MPD (Miles)</span></span>
+                                                                        )}
+                                                                    </div>
+                                                                </div>
+
+                                                                <button 
+                                                                    onClick={() => performFastLog(item)}
+                                                                    class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-[10px] font-bold flex items-center gap-1 shadow-md transition-all active:scale-95"
+                                                                >
+                                                                    <span>⚡ Fast Log</span>
+                                                                </button>
+                                                            </div>
+
+                                                            <p class="text-xs text-slate-300 mt-3 leading-relaxed bg-slate-950/50 p-3 rounded-xl border border-slate-900">
+                                                                {item.reason}
+                                                            </p>
+
+                                                            {/* Reward Details metrics */}
+                                                            <div class="mt-3 pt-2 border-t border-slate-900 text-[10px] text-slate-400 flex justify-between items-center px-0.5">
+                                                                <span>Projected Yield Value:</span>
+                                                                <span class="font-bold text-emerald-400">
+                                                                    {item.rewardType === 'Cashback' ? 'S$ ' : ''}
+                                                                    {item.projectedReward.toFixed(2)} {item.rewardType === 'Miles' ? ' Miles' : ''}
+                                                                </span>
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+
+                                    </div>
+                                )}
+
+                                {/* TAB 2: PORTFOLIO / WALLET SETUP */}
+                                {activeTab === 'wallet' && (
+                                    <div class="px-4 py-5 space-y-6">
+                                        <div class="flex items-center justify-between">
+                                            <div>
+                                                <h2 class="text-base font-extrabold text-white">Active Wallet Setup</h2>
+                                                <p class="text-[11px] text-slate-400">Integrate, customize limits and choose whitelists</p>
+                                            </div>
+                                            <button 
+                                                onClick={() => setShowOnboardModal(true)}
+                                                class="px-3 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-bold flex items-center gap-1 active:scale-95 shadow-lg shadow-emerald-500/10"
+                                            >
+                                                <span>+ Add Core Template</span>
+                                            </button>
+                                        </div>
+
+                                        {/* Dynamic active cards config */}
+                                        <div class="space-y-4">
+                                            {wallet.map(card => (
+                                                <div key={card.id} class="glass-panel p-5 rounded-3xl space-y-4 bg-gradient-to-br from-slate-900/90 to-slate-950">
+                                                    
+                                                    {/* Card banner header */}
+                                                    <div class="flex items-start justify-between pb-3 border-b border-slate-900">
+                                                        <div class="flex items-center gap-3">
+                                                            <div class={`w-10 h-7 rounded-md bg-gradient-to-r ${card.color} shadow-sm border border-white/10 flex items-center justify-center`}>
+                                                                <span class="text-[9px] font-black tracking-widest text-white/40">SG</span>
+                                                            </div>
+                                                            <div>
+                                                                <h3 class="text-xs font-bold text-white leading-tight">{card.name}</h3>
+                                                                <p class="text-[9px] text-slate-400 font-medium">{card.bank} • {card.type}</p>
+                                                            </div>
+                                                        </div>
+                                                        
+                                                        <button 
+                                                            onClick={() => removeCardFromWallet(card.id)}
+                                                            class="p-1.5 rounded-lg text-slate-500 hover:text-red-400 hover:bg-slate-950 transition-colors"
+                                                            title="Remove card"
+                                                        >
+                                                            🗑️
+                                                        </button>
+                                                    </div>
+
+                                                    {/* Statement & Custom Caps configurations */}
+                                                    <div class="grid grid-cols-2 gap-3.5">
+                                                        <div>
+                                                            <label class="block text-[10px] font-bold text-slate-400 mb-1.5 uppercase">Statement Cycle Day</label>
+                                                            <select 
+                                                                value={card.statementDay || 1} 
+                                                                onChange={(e) => updateCardSetup(card.id, { statementDay: parseInt(e.target.value) })}
+                                                                class="w-full px-3 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-white font-medium text-xs focus:outline-none"
+                                                            >
+                                                                {[...Array(28)].map((_, i) => (
+                                                                    <option key={i+1} value={i+1}>{i+1}st of month</option>
+                                                                ))}
+                                                            </select>
+                                                        </div>
+
+                                                        <div>
+                                                            <label class="block text-[10px] font-bold text-slate-400 mb-1.5 uppercase">Statement Cap (S$)</label>
+                                                            <input 
+                                                                type="number"
+                                                                value={card.customCap || 375}
+                                                                onChange={(e) => updateCardSetup(card.id, { customCap: parseFloat(e.target.value) })}
+                                                                class="w-full px-3 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-white font-bold text-xs focus:outline-none"
+                                                            />
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Preferred categories selection tags */}
+                                                    <div>
+                                                        <label class="block text-[10px] font-bold text-slate-400 mb-2 uppercase">Preferred Category Selection (Whitelisted Options)</label>
+                                                        <div class="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto pr-1">
+                                                            {card.whitelists.map(catName => {
+                                                                const isSelected = card.selectedCategories?.includes(catName);
+                                                                return (
+                                                                    <button
+                                                                        key={catName}
+                                                                        onClick={() => {
+                                                                            let updatedCats = [...(card.selectedCategories || [])];
+                                                                            if (isSelected) {
+                                                                                updatedCats = updatedCats.filter(c => c !== catName);
+                                                                            } else {
+                                                                                updatedCats.push(catName);
+                                                                            }
+                                                                            updateCardSetup(card.id, { selectedCategories: updatedCats });
+                                                                        }}
+                                                                        class={`px-3 py-1 rounded-full text-[9px] font-bold border transition-all ${isSelected ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30 font-extrabold' : 'bg-slate-950 text-slate-500 border-slate-800 hover:border-slate-700'}`}
+                                                                    >
+                                                                        {catName}
+                                                                    </button>
+                                                                );
+                                                            })}
+                                                        </div>
+                                                    </div>
+
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* TAB 3: TRANSACTION CRUD LEDGER */}
+                                {activeTab === 'log' && (
+                                    <div class="px-4 py-5 space-y-6">
+                                        
+                                        <div class="glass-panel p-5 rounded-3xl space-y-4">
+                                            <div class="flex items-center justify-between mb-1">
+                                                <h2 class="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                                                    {editingId ? 'Modify Ledger Record' : 'Record New Transaction'}
+                                                </h2>
+                                                {editingId && (
+                                                    <button onClick={resetTxForm} class="text-xs text-amber-400 font-semibold underline">Cancel Edit</button>
+                                                )}
+                                            </div>
+
+                                            <form onSubmit={saveTransaction} class="space-y-4">
+                                                <div>
+                                                    <label class="block text-[10px] font-bold text-slate-400 mb-1.5 uppercase">Merchant Name / Desc</label>
+                                                    <input 
+                                                        type="text" 
+                                                        value={merchant}
+                                                        onChange={(e) => setMerchant(e.target.value)}
+                                                        placeholder="e.g. FairPrice, Grab Ride, Sheng Siong"
+                                                        class="w-full px-3 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-white font-medium text-xs focus:ring-1 focus:ring-emerald-500 focus:outline-none"
+                                                        required
+                                                    />
+                                                </div>
+
+                                                <div class="grid grid-cols-2 gap-3.5">
+                                                    <div>
+                                                        <label class="block text-[10px] font-bold text-slate-400 mb-1.5 uppercase">Amount</label>
+                                                        <input 
+                                                            type="number" 
+                                                            step="0.01"
+                                                            value={amount}
+                                                            onChange={(e) => setAmount(e.target.value)}
+                                                            placeholder="0.00"
+                                                            class="w-full px-3 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-white font-bold text-xs focus:ring-1 focus:ring-emerald-500 focus:outline-none"
+                                                            required
+                                                        />
+                                                    </div>
+
+                                                    <div>
+                                                        <label class="block text-[10px] font-bold text-slate-400 mb-1.5 uppercase">Currency</label>
+                                                        <select 
+                                                            value={currency}
+                                                            onChange={(e) => setCurrency(e.target.value)}
+                                                            class="w-full px-3 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-white font-medium text-xs focus:ring-1 focus:ring-emerald-500 focus:outline-none"
+                                                        >
+                                                            <option value="SGD">SGD</option>
+                                                            <option value="MYR">MYR</option>
+                                                            <option value="IDR">IDR</option>
+                                                            <option value="USD">USD</option>
+                                                        </select>
+                                                    </div>
+                                                </div>
+
+                                                <div class="grid grid-cols-2 gap-3.5">
+                                                    <div>
+                                                        <label class="block text-[10px] font-bold text-slate-400 mb-1.5 uppercase">Category</label>
+                                                        <select 
+                                                            value={category}
+                                                            onChange={(e) => setCategory(e.target.value)}
+                                                            class="w-full px-3 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-white font-medium text-xs focus:ring-1 focus:ring-emerald-500 focus:outline-none"
+                                                        >
+                                                            <option value="Dining">Dining</option>
+                                                            <option value="Groceries">Groceries</option>
+                                                            <option value="Commute">Commute / Transport</option>
+                                                            <option value="Grab">Grab Rides / Food</option>
+                                                            <option value="McDonald's">McDonald's</option>
+                                                            <option value="Shopee">Shopee / Online Mart</option>
+                                                            <option value="SP Group">SP Utilities</option>
+                                                            <option value="Automotive">Automotive & Petrol</option>
+                                                            <option value="Telco & Streaming">Telco & Streaming</option>
+                                                            <option value="Online Shopping">Online Shopping</option>
+                                                            <option value="Beauty">Beauty & Spas</option>
+                                                            <option value="Retail">Retail & Fashion</option>
+                                                            <option value="Travel">Travel & Booking</option>
+                                                        </select>
+                                                    </div>
+
+                                                    <div>
+                                                        <label class="block text-[10px] font-bold text-slate-400 mb-1.5 uppercase">Payment instrument</label>
+                                                        <select 
+                                                            value={selectedCardId}
+                                                            onChange={(e) => setSelectedCardId(e.target.value)}
+                                                            class="w-full px-3 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-white font-medium text-xs focus:ring-1 focus:ring-emerald-500 focus:outline-none"
+                                                        >
+                                                            {wallet.map(c => (
+                                                                <option key={c.id} value={c.id}>{c.name}</option>
+                                                            ))}
+                                                        </select>
+                                                    </div>
+                                                </div>
+
+                                                <div>
+                                                    <label class="block text-[10px] font-bold text-slate-400 mb-1.5 uppercase">Date Executed</label>
+                                                    <input 
+                                                        type="date" 
+                                                        value={txDate}
+                                                        onChange={(e) => setTxDate(e.target.value)}
+                                                        class="w-full px-3 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-white font-medium text-xs focus:ring-1 focus:ring-emerald-500 focus:outline-none"
+                                                        required
+                                                    />
+                                                </div>
+
+                                                <button 
+                                                    type="submit"
+                                                    disabled={isSubmitting}
+                                                    class="w-full py-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-extrabold transition-all text-xs active:scale-95 shadow-md uppercase tracking-wider"
+                                                >
+                                                    {isSubmitting ? 'Syncing...' : (editingId ? 'Save Changes' : 'Sync Log Entry')}
+                                                </button>
+                                            </form>
+                                        </div>
+
+                                        {/* HISTORICAL LEDGER FEED */}
+                                        <div class="space-y-3">
+                                            <h3 class="text-xs font-bold text-slate-400 tracking-wider uppercase px-1">Verified Audit Trail</h3>
+                                            
+                                            {transactions.length === 0 ? (
+                                                <div class="glass-panel p-6 rounded-2xl text-center text-slate-400 text-xs">
+                                                    No historic spend records detected.
+                                                </div>
+                                            ) : (
+                                                <div class="space-y-3">
+                                                    {transactions.map(item => {
+                                                        const card = wallet.find(c => c.id === item.cardId) || { name: 'Card Removed', color: 'from-slate-700 to-slate-850' };
+                                                        return (
+                                                            <div key={item.id} class="glass-panel p-4 rounded-2xl flex items-center justify-between gap-3 bg-slate-900/40 border border-slate-900">
+                                                                
+                                                                <div class="flex items-center gap-3 min-w-0">
+                                                                    <div class={`w-2 h-9 rounded bg-gradient-to-b ${card.color}`}></div>
+                                                                    <div class="min-w-0">
+                                                                        <h4 class="text-xs font-bold text-white truncate">{item.desc}</h4>
+                                                                        <p class="text-[9px] text-slate-400 mt-1.5 flex items-center gap-1.5">
+                                                                            <span>{item.date}</span>
+                                                                            <span>•</span>
+                                                                            <span class="text-emerald-400 font-bold">{item.category}</span>
+                                                                            <span>•</span>
+                                                                            <span class="text-slate-300 truncate max-w-[80px]">{card.name}</span>
+                                                                        </p>
+                                                                    </div>
+                                                                </div>
+
+                                                                <div class="flex items-center gap-3">
+                                                                    <div class="text-right">
+                                                                        <div class="text-xs font-bold text-white">
+                                                                            {item.currency !== 'SGD' ? `${item.currency} ` : 'S$ '}
+                                                                            {item.amount.toFixed(2)}
+                                                                        </div>
+                                                                        {item.currency !== 'SGD' && (
+                                                                            <div class="text-[9px] text-slate-500">
+                                                                                ≈ S$ {item.sgdEquivalent.toFixed(2)}
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
+
+                                                                    <div class="flex items-center gap-1">
+                                                                        <button 
+                                                                            onClick={() => triggerEdit(item)}
+                                                                            class="p-1.5 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white transition-colors"
+                                                                            title="Edit Entry"
+                                                                        >
+                                                                            ✏️
+                                                                        </button>
+                                                                        <button 
+                                                                            onClick={() => deleteTransaction(item.id)}
+                                                                            class="p-1.5 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-red-400 transition-colors"
+                                                                            title="Delete Entry"
+                                                                        >
+                                                                            🗑️
+                                                                        </button>
+                                                                    </div>
+                                                                </div>
+
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
+                                            )}
+                                        </div>
+
+                                    </div>
+                                )}
+
+                                {/* TAB 4: ADVANCED YIELD PROGRESS ANALYSIS */}
+                                {activeTab === 'analysis' && (
+                                    <div class="px-4 py-5 space-y-6">
+                                        <div>
+                                            <h2 class="text-base font-extrabold text-white">Active Cycle Progress Bars</h2>
+                                            <p class="text-xs text-slate-400">Statement cycle tracker with highly detailed sub-progress criteria</p>
+                                        </div>
+
+                                        {wallet.map(card => {
+                                            const agg = cardAggregates[card.id] || { totalCycleSpend: 0, categorySpend: {} };
+                                            
+                                            return (
+                                                <div key={card.id} class="glass-panel p-5 rounded-3xl space-y-4">
+                                                    
+                                                    <div class="flex justify-between items-start">
+                                                        <div>
+                                                            <h3 class="text-xs font-bold text-white">{card.name}</h3>
+                                                            <p class="text-[9px] text-slate-400 mt-1">
+                                                                Cycle Day: {agg.cycleStart?.toLocaleDateString('en-SG', {day: 'numeric', month: 'short'})} to {agg.cycleEnd?.toLocaleDateString('en-SG', {day: 'numeric', month: 'short'})}
+                                                            </p>
+                                                        </div>
+                                                        <span class="text-[10px] font-bold text-slate-300 bg-slate-900 px-3 py-1 rounded-xl border border-slate-800">
+                                                            S$ {agg.totalCycleSpend.toFixed(2)} overall
+                                                        </span>
+                                                    </div>
+
+                                                    {/* Custom MAYBANK F&F Layout */}
+                                                    {card.id === 'maybank-ff' && (
+                                                        <div class="space-y-3.5 pt-2">
+                                                            <div>
+                                                                <div class="flex justify-between text-[10px] font-bold text-slate-400 mb-1 uppercase">
+                                                                    <span>Tier threshold gates ($800 / $1600)</span>
+                                                                    <span class="text-emerald-400">{(agg.totalCycleSpend / 1600 * 100).toFixed(0)}% reached</span>
+                                                                </div>
+                                                                <div class="w-full h-3 bg-slate-950 rounded-full overflow-hidden border border-slate-900 flex relative">
+                                                                    <div class="absolute left-1/2 top-0 bottom-0 w-[2px] bg-amber-500/50" title="S$800 mark"></div>
+                                                                    <div 
+                                                                        class="h-full bg-gradient-to-r from-amber-400 to-emerald-500 rounded-full" 
+                                                                        style={{ width: `${Math.min(100, (agg.totalCycleSpend / 1600) * 100)}%` }}
+                                                                    ></div>
+                                                                </div>
+                                                                <p class="text-[9px] text-slate-500 mt-1">
+                                                                    {agg.totalCycleSpend < 800 ? `Need S$${(800 - agg.totalCycleSpend).toFixed(2)} to activate Tier 1 6% cashback.` : 
+                                                                     agg.totalCycleSpend < 1600 ? `Tier 1 (6%) Active! Spend S$${(1600 - agg.totalCycleSpend).toFixed(2)} more for Tier 2 8%.` : 
+                                                                     'Tier 2 8% maximum yield unlocked! 🎉'}
+                                                                </p>
+                                                            </div>
+
+                                                            <div class="space-y-2 border-t border-slate-900/50 pt-3">
+                                                                <h4 class="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">Preferred Categories Spend Caps</h4>
+                                                                {card.selectedCategories?.map(cat => {
+                                                                    const spent = agg.categorySpend[cat] || 0;
+                                                                    const capSpendLimit = card.customCap || 375; 
+                                                                    const percentage = Math.min(100, (spent / capSpendLimit) * 100);
+                                                                    return (
+                                                                        <div key={cat} class="space-y-1">
+                                                                            <div class="flex justify-between text-[10px] text-slate-400">
+                                                                                <span>{cat}</span>
+                                                                                <span class="font-semibold text-slate-300">S$ {spent.toFixed(1)} / S$ {capSpendLimit}</span>
+                                                                            </div>
+                                                                            <div class="w-full h-1.5 bg-slate-950 rounded-full overflow-hidden">
+                                                                                <div class="h-full bg-amber-500 rounded-full" style={{ width: `${percentage}%` }}></div>
+                                                                            </div>
+                                                                        </div>
+                                                                    );
+                                                                })}
+                                                            </div>
+                                                        </div>
+                                                    )}
+
+                                                    {/* Custom UOB ONE dual layout */}
+                                                    {card.id === 'uob-one' && (
+                                                        <div class="space-y-3.5 pt-2">
+                                                            <div>
+                                                                <div class="flex justify-between text-[10px] font-bold text-slate-400 mb-1 uppercase">
+                                                                    <span>Stacked spend targets ($600 / $1000 / $2000)</span>
+                                                                    <span class="text-blue-400">{(agg.totalCycleSpend / 2000 * 100).toFixed(0)}% reached</span>
+                                                                </div>
+                                                                <div class="w-full h-3 bg-slate-950 rounded-full overflow-hidden border border-slate-900 relative">
+                                                                    <div 
+                                                                        class="h-full bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full" 
+                                                                        style={{ width: `${Math.min(100, (agg.totalCycleSpend / 2000) * 100)}%` }}
+                                                                    ></div>
+                                                                </div>
+                                                                <p class="text-[9px] text-slate-500 mt-1">
+                                                                    {agg.totalCycleSpend < 600 ? `Spend S$${(600 - agg.totalCycleSpend).toFixed(2)} to secure lowest rebate tier.` : 
+                                                                     agg.totalCycleSpend < 1000 ? `S$600 threshold completed. Spend S$${(1000 - agg.totalCycleSpend).toFixed(2)} for intermediate tier.` : 
+                                                                     agg.totalCycleSpend < 2000 ? `S$1000 threshold completed. Spend S$${(2000 - agg.totalCycleSpend).toFixed(2)} for peak tier.` : 
+                                                                     'Target S$2000 quarterly rebate tier satisfied!'}
+                                                                </p>
+                                                            </div>
+
+                                                            <div class="border-t border-slate-900/50 pt-3 space-y-2">
+                                                                <div class="flex justify-between text-[10px] font-extrabold text-slate-400 uppercase">
+                                                                    <span>Bonus Partner spend limit</span>
+                                                                    <span>S$ {(Object.keys(agg.categorySpend).filter(k => ['Grab', 'McDonald\'s', 'Shopee', 'SimplyGo', 'SP Group'].includes(k)).reduce((s,k) => s + agg.categorySpend[k], 0)).toFixed(1)} / S$ {card.customCap || 600}</span>
+                                                                </div>
+                                                                <div class="w-full h-2.5 bg-slate-950 rounded-full overflow-hidden">
+                                                                    <div 
+                                                                        class="h-full bg-indigo-500 rounded-full" 
+                                                                        style={{ width: `${Math.min(100, (Object.keys(agg.categorySpend).filter(k => ['Grab', 'McDonald\'s', 'Shopee', 'SimplyGo', 'SP Group'].includes(k)).reduce((s,k) => s + agg.categorySpend[k], 0) / (card.customCap || 600)) * 100)}%` }}
+                                                                    ></div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    )}
+
+                                                    {/* Generic progression bars for other template profiles */}
+                                                    {card.id !== 'maybank-ff' && card.id !== 'uob-one' && (
+                                                        <div class="space-y-3 pt-2">
+                                                            <div>
+                                                                <div class="flex justify-between text-[10px] font-bold text-slate-400 mb-1.5 uppercase">
+                                                                    <span>Active monthly bonus cap limit</span>
+                                                                    <span>S$ {agg.totalCycleSpend.toFixed(1)} / S$ {card.monthlyCap || card.customCap || 1000}</span>
+                                                                </div>
+                                                                <div class="w-full h-2 bg-slate-950 rounded-full overflow-hidden border border-slate-900">
+                                                                    <div 
+                                                                        class="h-full bg-pink-500 rounded-full" 
+                                                                        style={{ width: `${Math.min(100, (agg.totalCycleSpend / (card.monthlyCap || card.customCap || 1000)) * 100)}%` }}
+                                                                    ></div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    )}
+
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                )}
+
+                                {/* TAB 5: PUBLIC SETTINGS */}
+                                {activeTab === 'profile' && (
+                                    <div class="px-4 py-5 space-y-6">
+                                        <div class="glass-panel p-5 rounded-3xl space-y-4">
+                                            <div class="flex items-center gap-3">
+                                                <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-400 via-teal-500 to-indigo-600 flex items-center justify-center text-white text-base font-black">
+                                                    {user.email?.charAt(0).toUpperCase() || 'U'}
+                                                </div>
+                                                <div>
+                                                    <h3 class="text-xs font-bold text-white">{user.email || 'Isolated Guest Sandbox'}</h3>
+                                                    <p class="text-[9px] text-slate-400">TENANT ID: {user.uid}</p>
+                                                </div>
+                                            </div>
+
+                                            <div class="border-t border-slate-900/50 pt-4 space-y-2 text-xs">
+                                                <div class="flex justify-between py-1.5 border-b border-slate-900">
+                                                    <span class="text-slate-400">Vault Partition</span>
+                                                    <span class="text-emerald-400 font-bold">{user.isAnonymous ? 'Offline Sandbox' : 'Verified PWA Sync Active'}</span>
+                                                </div>
+                                                <div class="flex justify-between py-1.5 border-b border-slate-900">
+                                                    <span class="text-slate-400">Wallet Size</span>
+                                                    <span class="text-slate-200 font-bold">{wallet.length} Active Templates</span>
+                                                </div>
+                                                <div class="flex justify-between py-1.5">
+                                                    <span class="text-slate-400">Audit Ledger Logs</span>
+                                                    <span class="text-slate-200 font-bold">{transactions.length} items</span>
+                                                </div>
+                                            </div>
+
+                                            <button 
+                                                onClick={handleLogout}
+                                                class="w-full py-3 rounded-xl bg-slate-900 border border-slate-800 hover:bg-slate-800 text-red-400 font-extrabold text-xs transition-all active:scale-95 shadow-md uppercase tracking-wider"
+                                            >
+                                                Disconnect Vault Securely
+                                            </button>
+                                        </div>
+
+                                        <div class="glass-panel p-5 rounded-3xl space-y-3 text-[10px] leading-relaxed text-slate-400">
+                                            <h4 class="font-bold text-white text-xs mb-1 uppercase tracking-wider">Singapore 2026 Credit T&C Notes</h4>
+                                            <p>• <strong>Maybank Friends & Family</strong>: Category 'Transport' renamed to 'Commute', and 'Pharmacy' replaced with 'Automotive'. Tier 1 minimum spend limit is S$800, Tier 2 is S$1,600.</p>
+                                            <p>• <strong>UOB One Card</strong>: Meets maximum cashback structures upon reaching consecutive 3-month thresholds of S$600, S$1,000, or S$2,000.</p>
+                                            <p>• <strong>UOB Lady's Solitaire</strong>: Max S$2,000 overall preferred categories cap, flexible setup supported.</p>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
+                    </main>
+
+                    {/* MODAL: CORE CARD TEMPLATES ONBOARD */}
+                    {showOnboardModal && (
+                        <div class="fixed inset-0 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 z-50 animate-fade-in">
+                            <div class="glass-panel w-full max-w-sm rounded-3xl overflow-hidden shadow-2xl p-5 space-y-4 max-h-[80vh] overflow-y-auto">
+                                <div class="flex items-center justify-between border-b border-slate-900 pb-2">
+                                    <h3 class="text-xs font-bold text-white uppercase tracking-wider">Credit Card templates (Singapore 2026)</h3>
+                                    <button 
+                                        onClick={() => setShowOnboardModal(false)}
+                                        class="p-1 rounded-lg text-slate-400 hover:text-white"
+                                    >
+                                        ✕
+                                    </button>
+                                </div>
+
+                                <div class="space-y-3">
+                                    {CARD_TEMPLATES.map(template => {
+                                        const isAlreadyAdded = wallet.some(c => c.id === template.id);
+                                        return (
+                                            <div key={template.id} class="p-4 rounded-2xl bg-slate-900 border border-slate-800 space-y-2">
+                                                <div class="flex items-start justify-between">
+                                                    <div>
+                                                        <span class="text-xs font-bold text-white">{template.name}</span>
+                                                        <p class="text-[9px] text-slate-400">{template.bank} • {template.type}</p>
+                                                    </div>
+                                                    
+                                                    <button 
+                                                        disabled={isAlreadyAdded}
+                                                        onClick={() => addCardToWallet(template)}
+                                                        class={`px-3.5 py-1 rounded-xl text-[10px] font-bold ${isAlreadyAdded ? 'bg-slate-950 text-slate-600 cursor-not-allowed border border-slate-900' : 'bg-emerald-500 hover:bg-emerald-400 text-slate-950 active:scale-95 transition-all'}`}
+                                                    >
+                                                        {isAlreadyAdded ? 'Active' : '+ Integrate'}
+                                                    </button>
+                                                </div>
+                                                <p class="text-[10px] text-slate-400 leading-relaxed">
+                                                    {template.desc}
+                                                </p>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Navigation pinned tab bar */}
+                    {user && (
+                        <nav class="fixed bottom-0 left-0 right-0 border-t border-slate-900 bg-slate-950/85 backdrop-blur-md py-4 px-4 flex items-center justify-around z-50">
+                            
+                            <button 
+                                onClick={() => { setActiveTab('optimizer'); resetTxForm(); }}
+                                class={`flex flex-col items-center gap-1 transition-colors ${activeTab === 'optimizer' ? 'text-emerald-400' : 'text-slate-500 hover:text-slate-300'}`}
+                            >
+                                <span class="text-xs">⚡</span>
+                                <span class="text-[9px] font-bold tracking-wider uppercase">Optimizer</span>
+                            </button>
+
+                            <button 
+                                onClick={() => { setActiveTab('wallet'); resetTxForm(); }}
+                                class={`flex flex-col items-center gap-1 transition-colors ${activeTab === 'wallet' ? 'text-emerald-400' : 'text-slate-500 hover:text-slate-300'}`}
+                            >
+                                <span class="text-xs">💳</span>
+                                <span class="text-[9px] font-bold tracking-wider uppercase">My Wallet</span>
+                            </button>
+
+                            <button 
+                                onClick={() => { setActiveTab('log'); }}
+                                class={`flex flex-col items-center gap-1 transition-colors ${activeTab === 'log' ? 'text-emerald-400' : 'text-slate-500 hover:text-slate-300'}`}
+                            >
+                                <span class="text-xs">📝</span>
+                                <span class="text-[9px] font-bold tracking-wider uppercase">Sync Log</span>
+                            </button>
+
+                            <button 
+                                onClick={() => { setActiveTab('analysis'); resetTxForm(); }}
+                                class={`flex flex-col items-center gap-1 transition-colors ${activeTab === 'analysis' ? 'text-emerald-400' : 'text-slate-500 hover:text-slate-300'}`}
+                            >
+                                <span class="text-xs">📊</span>
+                                <span class="text-[9px] font-bold tracking-wider uppercase">Cycles</span>
+                            </button>
+
+                            <button 
+                                onClick={() => { setActiveTab('profile'); resetTxForm(); }}
+                                class={`flex flex-col items-center gap-1 transition-colors ${activeTab === 'profile' ? 'text-emerald-400' : 'text-slate-500 hover:text-slate-300'}`}
+                            >
+                                <span class="text-xs">🔑</span>
+                                <span class="text-[9px] font-bold tracking-wider uppercase">Secure Vault</span>
+                            </button>
+
+                        </nav>
+                    )}
+
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+  <script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('./sw.js')
+        .then(reg => console.log('SwipeWise PWA Service Worker active!', reg.scope))
+        .catch(err => console.error('Service Worker registration failed: ', err));
+    });
+  }
+</script>
+</body>
+</html>
