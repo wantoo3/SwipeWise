@@ -69,22 +69,15 @@
     const { useState, useEffect, useMemo, useRef } = React;
 
     // --- 1. FIREBASE CONFIGURATION ---
-    // PLACE YOUR OWN FIREBASE CONFIG CONFIGURATION HERE
     const firebaseConfig = {
-apiKey: "AIzaSyC9Pq0TwtuRJbNEMAg7wt72fIPuqIJeJLs"
-
-authDomain: "swipewise-9a6cf.firebaseapp.com"
-
-projectId: "swipewise-9a6cf"
-
-storageBucket: "swipewise-9a6cf.firebasestorage.app"
-
-messagingSenderId: "42823892148"
-
-appId: "1:428823892148:web:36c3b09f66f258d2a847e1"
+      apiKey: "AIzaSyC9Pq0TwtuRJbNEMAg7wt72fIPuqIJeJLs",
+      authDomain: "swipewise-9a6cf.firebaseapp.com",
+      projectId: "swipewise-9a6cf",
+      storageBucket: "swipewise-9a6cf.firebasestorage.app",
+      messagingSenderId: "428823892148",
+      appId: "1:428823892148:web:36c3b09f66f258d2a847e1"
     };
 
-    // Fallback/Mock Mode if Config is Empty to make sure UI compiles immediately
     const isFirebaseConfigured = firebaseConfig.apiKey && firebaseConfig.apiKey !== "";
     
     let db = null;
