@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>SwipeWise | SG Credit Card Yield Optimizer</title>
+  <title>SwipeWise | Singapore 2026 Credit Card Yield Optimizer</title>
   
   <!-- PWA Meta Tags -->
   <link rel="manifest" href="manifest.json">
@@ -59,7 +59,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js" crossorigin></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.24.7/babel.min.js" crossorigin></script>
 
-  <!-- Firebase Legacy Compat SDKs (Stable Web Iframe Imports) -->
+  <!-- Firebase Legacy Compat SDKs -->
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
@@ -75,7 +75,6 @@
   <script type="text/babel">
     const { useState, useEffect, useMemo, useRef } = React;
 
-    // --- 1. FIREBASE CONFIGURATION (VERIFIED PRODUCTION VALUES) ---
     const firebaseConfig = {
       apiKey: "AIzaSyC9Pq0TwtuRJbNEMAg7wt72fIPuqIJejLs",
       authDomain: "swipewise-9a6cf.firebaseapp.com",
@@ -102,7 +101,6 @@
       }
     }
 
-    // --- 2. 2026 SINGAPORE CARD REFERENCE DATABASE (FINETUNED & UPDATED) ---
     const PRESET_CARDS = [
       {
         id: 'maybank-ff',
@@ -112,28 +110,28 @@
         baseRate: 0.3,
         bonusRate: 8.0,
         minSpend: 800,
-        globalCap: 125, // Overall cashback cap of S$125 with S$800 min spend, S$25 cap on each category
+        globalCap: 125, 
         categoryCap: 312.50, // S$312.50 spend per category hits the S$25 sub-cap
         categories: ['Groceries', 'Dining', 'Transport/SimplyGo', 'Online Shopping', 'Travel'],
         requiresSelection: true,
         maxSelectable: 5,
         defaultSelectedCategories: ['Groceries', 'Dining', 'Transport/SimplyGo'],
         desc: '8% Cashback on 5 selected categories up to S$125 overall rebate cap.',
-        briefGuide: 'Spend at least S$800 monthly. Cashback is capped at S$25 per category (up to S$312.50 spend per category). If spend is S$500 to S$799, earn 5% instead. Below S$500 earns 0.3% base rate.'
+        briefGuide: 'Requires minimum S$800 monthly spend. Cashback is capped at S$25 per category (up to S$312.50 category spend). Spend S$500 to S$799 to get 5% cashback instead.'
       },
       {
         id: 'uob-one',
         name: 'UOB One Card',
         issuer: 'UOB',
         type: 'Cashback',
-        baseRate: 3.33,
-        bonusRate: 10.0, // Up to 10% on partner merchants (Grab, Shopee, SimplyGo, SP Group)
+        baseRate: 0.3,
+        bonusRate: 10.0, // Up to 10% on partner merchants
         minSpend: 500, // Tiers: S$500, S$1000, S$2000
-        globalCap: 100, // Quarterly cash rebate cap
+        globalCap: 100, 
         categories: ['Groceries', 'Dining', 'Transport/SimplyGo', 'Utilities', 'Online Shopping'],
         requiresSelection: false,
-        desc: 'Up to 10% on partners with S$500/S$1,000/S$2,000 monthly spend tiers.',
-        briefGuide: 'Requires a minimum of 10 transactions per month. You must hit your spending tier (S$500, S$1,000, or S$2,000) for all 3 consecutive months in a quarter. Groceries earn up to 8%, SP utilities earn up to 4.33%.'
+        desc: 'Up to 10% on key partner merchants with consecutive tiered monthly spend.',
+        briefGuide: 'Requires min 5 active transactions. Tiers: S$500/mth gets up to 3.33% (8% partners), S$1k/mth gets up to 3.33% (8% partners), S$2k/mth gets up to 5% (10% partners). Base rate of 0.3% applies if gates are missed.'
       },
       {
         id: 'hsbc-liveplus',
@@ -144,24 +142,10 @@
         bonusRate: 8.0,
         minSpend: 600,
         globalCap: 83.33, // S$250 quarterly cap split monthly (~S$83)
-        categories: ['Dining', 'Shopping', 'Entertainment'],
+        categories: ['Dining', 'Online Shopping', 'Retail/General'], // Matches dining, shopping, entertainment
         requiresSelection: false,
-        desc: '8% cashback on Dining, Shopping & Entertainment globally.',
-        briefGuide: 'Earn 8% cashback globally on Dining, Shopping, and Entertainment by spending at least S$600 within the calendar month. Total cashback capped at S$250 per calendar quarter.'
-      },
-      {
-        id: 'hsbc-revolution',
-        name: 'HSBC Revolution',
-        issuer: 'HSBC',
-        type: 'Miles',
-        baseRate: 0.4,
-        bonusRate: 4.0, // 4 mpd on online/contactless
-        minSpend: 0,
-        globalCap: 1000, // Caps out on S$1,000 spend
-        categories: ['Online Shopping', 'Travel', 'Dining', 'Transport/SimplyGo'],
-        requiresSelection: false,
-        desc: '4 mpd (10x Reward Points) on contactless and online transactions up to S$1,000 monthly.',
-        briefGuide: 'Visa Signature card with S$0 permanent annual fee. Earns 4 Miles Per Dollar (4 MPD) on contactless and direct online payments (excluding Online Travel Agencies like Agoda, book airlines directly). Monthly bonus spend cap of S$1,000.'
+        desc: '8% cashback on local and overseas Dining, Shopping & Entertainment.',
+        briefGuide: 'Requires S$600 minimum monthly spend. Bonus rate of 8% on designated lifestyle categories capped at S$250 per quarter. Below S$600 earns 0.3%.'
       },
       {
         id: 'uob-ladys-solitaire',
@@ -169,15 +153,99 @@
         issuer: 'UOB',
         type: 'Miles',
         baseRate: 0.4,
-        bonusRate: 4.0, // 4 mpd on selected category
+        bonusRate: 4.0, 
         minSpend: 0,
         globalCap: 2000, // Solitaire cap S$2,000 spend
-        categories: ['Dining', 'Travel', 'Shopping', 'Beauty', 'Transport/SimplyGo', 'Entertainment', 'Family'],
+        categories: ['Dining', 'Travel', 'Online Shopping', 'Retail/General', 'Transport/SimplyGo'],
         requiresSelection: true,
         maxSelectable: 2,
-        defaultSelectedCategories: ['Dining', 'Travel'],
-        desc: '4 mpd (10 UNI$) on up to 2 selected categories. High S$2,000 cap.',
-        briefGuide: 'Choose up to 2 preferred categories (e.g. Dining, Travel) to earn 4 Miles Per Dollar (10 UNI$ per S$5 spend). Bonus points cap out at S$2,000 spend per calendar month. No minimum spend requirement.'
+        defaultSelectedCategories: ['Dining', 'Online Shopping'],
+        desc: '4 mpd (10 UNI$) on up to 2 selected categories. High S$2,000 monthly cap.',
+        briefGuide: 'Select 2 categories to earn 4 Miles Per Dollar (4 MPD) up to S$2,000 spend per calendar month. S$0 minimum spend.'
+      },
+      {
+        id: 'uob-evol',
+        name: 'UOB Evol Card',
+        issuer: 'UOB',
+        type: 'Cashback',
+        baseRate: 0.3,
+        bonusRate: 8.0,
+        minSpend: 600,
+        globalCap: 60, // Split into category sub-caps
+        categories: ['Online Shopping', 'Transport/SimplyGo', 'Dining'], 
+        requiresSelection: false,
+        desc: '8% Cashback on Online & Mobile Contactless spends.',
+        briefGuide: 'Spend at least S$600 monthly. Sub-caps of S$20 apply separately for Online transactions, Mobile Contactless transactions, and Base Spend (total S$60 cap).'
+      },
+      {
+        id: 'citi-cashback',
+        name: 'Citi Cash Back Card',
+        issuer: 'Citibank',
+        type: 'Cashback',
+        baseRate: 0.25,
+        bonusRate: 8.0, // 8% Petrol, 6% Groceries & Dining
+        minSpend: 800,
+        globalCap: 75, // Split as S$25 per sub-category
+        categories: ['Dining', 'Groceries', 'Transport/SimplyGo'],
+        requiresSelection: false,
+        desc: '8% Cashback on Petrol, 6% on Dining & Groceries.',
+        briefGuide: 'Requires S$800 minimum monthly spend. 8% on Petrol, 6% on Dining, 6% on Groceries. Each category is capped individually at S$25 cashback monthly.'
+      },
+      {
+        id: 'citi-rewards-amaze',
+        name: 'Citi Rewards + Amaze Combo',
+        issuer: 'Citibank',
+        type: 'Miles',
+        baseRate: 0.4,
+        bonusRate: 4.0,
+        minSpend: 0,
+        globalCap: 1000, // Caps out on S$1,000 spend
+        categories: ['Online Shopping', 'Dining', 'Travel', 'Retail/General'],
+        requiresSelection: false,
+        desc: '4 MPD on Online transactions and Shopping, pairs with Instarem Amaze to bypass FX fees.',
+        briefGuide: 'Earn 4 MPD on all online transactions and offline shopping. Instarem Amaze card links to convert offline payments to online. Monthly bonus cap is S$1,000 spend.'
+      },
+      {
+        id: 'ocbc-365',
+        name: 'OCBC 365 Card',
+        issuer: 'OCBC',
+        type: 'Cashback',
+        baseRate: 0.3,
+        bonusRate: 5.0, // 5% Dining, 3% Groceries, Utilities, Travel, Transport
+        minSpend: 800,
+        globalCap: 80,
+        categories: ['Dining', 'Groceries', 'Transport/SimplyGo', 'Utilities', 'Travel'],
+        requiresSelection: false,
+        desc: 'Multi-category daily cashback builder with flexible categories.',
+        briefGuide: 'Requires S$800 minimum monthly spend. Earns 5% on Dining, 3% on Groceries, Land Transport, Utilities, and Travel. Overall cashback is capped at S$80 monthly.'
+      },
+      {
+        id: 'hsbc-revolution',
+        name: 'HSBC Revolution',
+        issuer: 'HSBC',
+        type: 'Miles',
+        baseRate: 0.4,
+        bonusRate: 4.0, 
+        minSpend: 0,
+        globalCap: 1000, 
+        categories: ['Online Shopping', 'Travel', 'Dining', 'Transport/SimplyGo'],
+        requiresSelection: false,
+        desc: '4 mpd on online and contactless purchases with no annual fees.',
+        briefGuide: 'No minimum monthly spend required. Earns 4 MPD on qualifying online and contactless spending, up to a monthly bonus cap of S$1,000 spend.'
+      },
+      {
+        id: 'citi-cashback-plus',
+        name: 'Citi Cash Back+ Card',
+        issuer: 'Citibank',
+        type: 'Cashback',
+        baseRate: 1.6,
+        bonusRate: 1.6,
+        minSpend: 0,
+        globalCap: 99999, // Unlimited
+        categories: ['Dining', 'Groceries', 'Online Shopping', 'Transport/SimplyGo', 'Travel', 'Utilities', 'Foreign Currency', 'Retail/General'],
+        requiresSelection: false,
+        desc: 'Unlimited flat-rate 1.6% cashback on all spending. No minimum spend.',
+        briefGuide: 'Flat 1.6% cashback with zero minimum spend and zero monthly reward limits. Ideal catch-all card.'
       },
       {
         id: 'dcs-flexi',
@@ -188,10 +256,10 @@
         bonusRate: 8.0,
         minSpend: 500,
         globalCap: 50,
-        categories: ['Foreign Currency', 'Dining', 'Shopping'],
+        categories: ['Foreign Currency', 'Dining', 'Retail/General'],
         requiresSelection: false,
         desc: '8% cash rebate on foreign currency transactions up to a sub-cap.',
-        briefGuide: 'Earn 8% cash rebate on overseas and foreign currency transactions with minimum S$500 monthly spend. Cumulative cash rewards capped at S$50 per statement month.'
+        briefGuide: 'Requires S$500 monthly spend. Earns 8% cashback on foreign currency transactions, up to a maximum cashback cap of S$50 monthly.'
       }
     ];
 
@@ -199,27 +267,20 @@
       'Dining', 'Groceries', 'Online Shopping', 'Transport/SimplyGo', 'Travel', 'Utilities', 'Foreign Currency', 'Retail/General'
     ];
 
-    // --- 3. ROOT REACT APPLICATION ---
     function App() {
-      // User State
       const [user, setUser] = useState(null);
       const [loading, setLoading] = useState(true);
       const [networkOnline, setNetworkOnline] = useState(navigator.onLine);
+      const [activeTab, setActiveTab] = useState('home'); 
 
-      // Active Tab
-      const [activeTab, setActiveTab] = useState('home'); // 'home', 'wallet', 'analysis', 'logs'
-
-      // Application Domain States
       const [wallet, setWallet] = useState([]);
       const [transactions, setTransactions] = useState([]);
 
-      // Calculator Input Panel
       const [calcCategory, setCalcCategory] = useState('Dining');
       const [calcAmount, setCalcAmount] = useState('');
       const [calcCurrency, setCalcCurrency] = useState('SGD');
       const [calcIsOnline, setCalcIsOnline] = useState(false);
 
-      // Add Card modal & Configuration UI
       const [isAddingCard, setIsAddingCard] = useState(false);
       const [editingCardInstanceId, setEditingCardInstanceId] = useState(null);
       const [configCardTemplate, setConfigCardTemplate] = useState(null);
@@ -227,7 +288,6 @@
       const [configBillingCycle, setConfigBillingCycle] = useState(1);
       const [configCustomCap, setConfigCustomCap] = useState('');
 
-      // Transaction Logging Modal
       const [isLoggingTx, setIsLoggingTx] = useState(false);
       const [txCardInstanceId, setTxCardInstanceId] = useState('');
       const [txCategory, setTxCategory] = useState('Dining');
@@ -237,7 +297,6 @@
       const [txDate, setTxDate] = useState(new Date().toISOString().split('T')[0]);
       const [txEditingId, setTxEditingId] = useState(null);
 
-      // Custom Confirmation Overlay Modal State (No-Alert / No-Confirm Rule)
       const [confirmModal, setConfirmModal] = useState({
         isOpen: false,
         title: '',
@@ -245,15 +304,12 @@
         onConfirm: null
       });
 
-      // Global Notification/Modal System
       const [feedbackMsg, setFeedbackMsg] = useState(null);
 
-      // Helper to check if we should write to Firebase cloud database or local sandbox fallback
       const useFirebase = useMemo(() => {
         return isFirebaseConfigured && auth && auth.currentUser && user && user.uid !== 'anonymous-hustler';
       }, [user]);
 
-      // Network Offline State Monitor
       useEffect(() => {
         const handleOnline = () => setNetworkOnline(true);
         const handleOffline = () => setNetworkOnline(false);
@@ -265,24 +321,22 @@
         };
       }, []);
 
-      // Dynamic Lucide Icon Refresh Compiler
       useEffect(() => {
         const timer = setTimeout(() => {
           if (typeof lucide !== 'undefined') {
             lucide.createIcons();
           }
-        }, 120);
+        }, 150);
         return () => clearTimeout(timer);
       }, [user, activeTab, isAddingCard, isLoggingTx, transactions, wallet]);
 
-      // Sign-in Status Monitor
       useEffect(() => {
         if (!isFirebaseConfigured) {
           setUser({
             uid: 'dev-user-123',
-            displayName: 'Ah Xi',
-            email: 'ahxi@swipewise.sg',
-            photoURL: 'https://placehold.co/100x100/10b981/020617?text=AX'
+            displayName: 'SG Hacker',
+            email: 'optimizer@swipewise.sg',
+            photoURL: 'https://placehold.co/100x100/10b981/020617?text=SG'
           });
           setLoading(false);
           return;
@@ -297,7 +351,6 @@
         return () => unsubscribe();
       }, []);
 
-      // Pull Database Realtime/Local Storage Updates Hook
       useEffect(() => {
         if (!user) return;
 
@@ -309,7 +362,6 @@
           return;
         }
 
-        // Fetch User Wallet List Realtime
         const walletUnsubscribe = db.collection('users').doc(user.uid).collection('wallet')
           .onSnapshot((snapshot) => {
             const list = [];
@@ -317,7 +369,6 @@
             setWallet(list);
           }, (err) => showToast("Database Sync Error: " + err.message));
 
-        // Fetch Transactions List Realtime
         const txUnsubscribe = db.collection('users').doc(user.uid).collection('transactions')
           .onSnapshot((snapshot) => {
             const list = [];
@@ -332,22 +383,20 @@
         };
       }, [user, useFirebase]);
 
-      // Trigger temporary Toast notifications
       const showToast = (msg) => {
         setFeedbackMsg(msg);
         setTimeout(() => setFeedbackMsg(null), 4000);
       };
 
-      // Handle Authentication triggers with immediate state updates
       const handleGoogleLogin = async () => {
         if (!isFirebaseConfigured) {
           setUser({
             uid: 'dev-user-123',
-            displayName: 'Ah Xi',
-            email: 'ahxi@swipewise.sg',
-            photoURL: 'https://placehold.co/100x100/10b981/020617?text=AX'
+            displayName: 'SG Optimizer',
+            email: 'hustler@swipewise.sg',
+            photoURL: 'https://placehold.co/100x100/10b981/020617?text=SG'
           });
-          showToast("Local Sandbox Mode Active");
+          showToast("Local Sandbox Active");
           return;
         }
         try {
@@ -380,14 +429,12 @@
         }
       };
 
-      // Exchange Conversion Utilities
       const convertToSGD = (amount, currency) => {
         const value = parseFloat(amount) || 0;
         const rates = { SGD: 1.0, MYR: 0.31, USD: 1.34, EUR: 1.45, JPY: 0.0089 };
         return value * (rates[currency] || 1.0);
       };
 
-      // Custom safe confirmation helper replacing standard window.confirm()
       const triggerConfirm = (title, message, onConfirmAction) => {
         setConfirmModal({
           isOpen: true,
@@ -400,7 +447,6 @@
         });
       };
 
-      // Add/Update User Cards to Wallet Config
       const handleSaveCardSetup = async () => {
         if (!configCardTemplate) return;
         
@@ -457,7 +503,6 @@
         setConfigCustomCap('');
       };
 
-      // FIXED REMOVE CARD: Swapped database check to dynamic auth monitor
       const handleRemoveCard = (docId) => {
         triggerConfirm(
           "Remove Credit Card", 
@@ -480,7 +525,6 @@
         );
       };
 
-      // Transaction CRUD actions with FIXED transaction edit logic
       const handleSaveTransaction = async (e) => {
         e.preventDefault();
         if (!txCardInstanceId) {
@@ -549,7 +593,6 @@
         setIsLoggingTx(true);
       };
 
-      // FIXED DELETE TRANSACTION: Swapped database check to dynamic auth monitor
       const handleDeleteTx = (docId) => {
         triggerConfirm(
           "Delete Spent Entry",
@@ -572,7 +615,6 @@
         );
       };
 
-      // Custom Billing/Statement Period Filter logic
       const getTransactionsForCardCycle = (card, allTxs) => {
         const cycleDay = card.billingCycleDate || 1;
         const now = new Date();
@@ -595,7 +637,6 @@
         });
       };
 
-      // --- 4. PRECISION YIELD ENGINE CORE LOGIC (WATERFALL ENGINE OVERHAUL) ---
       const sortedYieldRecommendations = useMemo(() => {
         if (wallet.length === 0) return [];
         const targetAmt = parseFloat(calcAmount) || 0;
@@ -611,7 +652,7 @@
           
           const isTargetCategoryActive = card.selectedCategories && card.selectedCategories.includes(calcCategory);
 
-          // --- WATERFALL FLOWS BY CARD ID ---
+          // 1. Maybank Friends & Family Waterfall
           if (card.templateId === 'maybank-ff') {
             const catTxs = cardTxs.filter(t => t.category === calcCategory);
             const catSpend = catTxs.reduce((sum, t) => sum + t.amountSGD, 0);
@@ -621,7 +662,7 @@
               
               if (prospectiveSpend < 800) {
                 rate = 0.3;
-                notes = `Prospective spend S$${prospectiveSpend.toFixed(0)} is below the S$800 threshold for 8% cashback. Base 0.3% applies.`;
+                notes = `Prospective spend S$${prospectiveSpend.toFixed(0)} is below the S$800 threshold for 8%. Base 0.3% applies.`;
               } else if (catSpend >= 312.50) {
                 rate = 0.3;
                 notes = `S$25 category cashback cap reached for ${calcCategory} (already spent S$${catSpend.toFixed(0)}). Base rate applies.`;
@@ -630,39 +671,44 @@
                 
                 if (targetAmtSGD <= remainingHeadroom) {
                   rate = 8.0;
-                  notes = `Earns 8% cashback. You have S$${remainingHeadroom.toFixed(0)} remaining category headroom.`;
+                  notes = `Earns 8% cashback. S$${remainingHeadroom.toFixed(0)} remaining category headroom.`;
                 } else {
                   const bonusPortion = remainingHeadroom;
-                  const basePortion = Math.max(0, targetAmtSGD - remainingHeadroom);
+                  const basePortion = targetAmtSGD - remainingHeadroom;
                   const averageRate = ((bonusPortion * 8.0) + (basePortion * 0.3)) / targetAmtSGD;
                   rate = parseFloat(averageRate.toFixed(2));
-                  notes = `CAPPED WATERFALL: S$${bonusPortion.toFixed(0)} earns 8%, spillover S$${basePortion.toFixed(0)} earns 0.3%. Average yield: ${rate}%.`;
+                  notes = `CAPPED WATERFALL: S$${bonusPortion.toFixed(0)} earns 8%, spillover S$${basePortion.toFixed(0)} earns 0.3%. Blended yield: ${rate}%.`;
                 }
               }
             }
           } 
+          // 2. UOB One Waterfall
           else if (card.templateId === 'uob-one') {
             const isPartner = ['Groceries', 'Transport/SimplyGo', 'Online Shopping'].includes(calcCategory);
             const totalMonthlySpendWithTx = currentTotalSpend + targetAmtSGD;
 
             if (totalMonthlySpendWithTx < 500) {
-              rate = 3.33;
-              notes = `Pending UOB One S$500 spend gate. Currently at S$${currentTotalSpend.toFixed(0)}. Base rate 3.33% applies.`;
+              rate = 0.3;
+              notes = `Pending UOB One S$500 spend gate. Currently at S$${currentTotalSpend.toFixed(0)}. Base 0.3% applies.`;
             } else {
-              rate = isPartner ? 10.0 : 5.0;
-              notes = `Meets UOB spend gate. Multiplier active: ${rate}% cashback on ${calcCategory}. (Ensures ≥ 10 transactions monthly!)`;
+              let tierRate = 3.33;
+              if (totalMonthlySpendWithTx >= 2000) tierRate = 5.0;
+              
+              rate = isPartner ? (tierRate + 5.0) : tierRate;
+              notes = `Meets spend gate tier. Multiplier active: ${rate}% cashback on ${calcCategory}. Ensure 5 active transactions.`;
             }
           }
+          // 3. HSBC Live+ Waterfall
           else if (card.templateId === 'hsbc-liveplus') {
             const prospectiveTotal = currentTotalSpend + targetAmtSGD;
             if (prospectiveTotal < 600) {
               rate = 0.3;
               notes = `HSBC Live+ requires S$600 min monthly spend. Currently S$${currentTotalSpend.toFixed(0)} logged. Base 0.3% applies.`;
-            } else if (['Dining', 'Groceries'].includes(calcCategory)) {
-              const maxMonthlyCapSpend = 1000;
+            } else if (['Dining', 'Online Shopping', 'Retail/General'].includes(calcCategory)) {
+              const maxMonthlyCapSpend = 1041.67; // ~$83.33 monthly cap equivalent
               if (currentTotalSpend >= maxMonthlyCapSpend) {
                 rate = 0.3;
-                notes = `S$1,000 monthly bonus threshold met. Spillover earns base rate 0.3%.`;
+                notes = `S$83.33 monthly bonus threshold met. Spillover earns base rate 0.3%.`;
               } else {
                 const remainingLimit = Math.max(0, maxMonthlyCapSpend - currentTotalSpend);
                 if (targetAmtSGD <= remainingLimit) {
@@ -673,32 +719,12 @@
                   const basePart = targetAmtSGD - remainingLimit;
                   const avgRate = ((bonusPart * 8.0) + (basePart * 0.3)) / targetAmtSGD;
                   rate = parseFloat(avgRate.toFixed(2));
-                  notes = `CAPPED WATERFALL: S$${bonusPart.toFixed(0)} earns 8%, spillover S$${basePart.toFixed(0)} earns 0.3%. Average yield: ${rate}%.`;
+                  notes = `CAPPED WATERFALL: S$${bonusPart.toFixed(0)} earns 8%, spillover S$${basePart.toFixed(0)} earns 0.3%. Blended yield: ${rate}%.`;
                 }
               }
             }
           }
-          else if (card.templateId === 'hsbc-revolution') {
-            if (['Online Shopping', 'Travel', 'Dining', 'Transport/SimplyGo'].includes(calcCategory)) {
-              rateType = 'Miles';
-              if (currentTotalSpend >= 1000) {
-                rate = 0.4;
-                notes = `HSBC Revolution monthly S$1,000 bonus limit reached. Fallback to base 0.4 MPD.`;
-              } else {
-                const remainingLimit = Math.max(0, 1000 - currentTotalSpend);
-                if (targetAmtSGD <= remainingLimit) {
-                  rate = 4.0;
-                  notes = `Unlocks 4.0 MPD. Cap headroom: S$${remainingLimit.toFixed(0)} remaining.`;
-                } else {
-                  const bonusPart = remainingLimit;
-                  const basePart = targetAmtSGD - remainingLimit;
-                  const avgRate = ((bonusPart * 4.0) + (basePart * 0.4)) / targetAmtSGD;
-                  rate = parseFloat(avgRate.toFixed(2));
-                  notes = `CAPPED WATERFALL: S$${bonusPart.toFixed(0)} earns 4.0 MPD, spillover S$${basePart.toFixed(0)} earns 0.4 MPD. Avg: ${rate} MPD.`;
-                }
-              }
-            }
-          }
+          // 4. UOB Lady's Solitaire Waterfall
           else if (card.templateId === 'uob-ladys-solitaire') {
             if (isTargetCategoryActive) {
               rateType = 'Miles';
@@ -715,11 +741,170 @@
                   const basePart = targetAmtSGD - remainingLimit;
                   const avgRate = ((bonusPart * 4.0) + (basePart * 0.4)) / targetAmtSGD;
                   rate = parseFloat(avgRate.toFixed(2));
-                  notes = `CAPPED WATERFALL: S$${bonusPart.toFixed(0)} earns 4.0 MPD, spillover S$${basePart.toFixed(0)} earns 0.4 MPD. Avg: ${rate} MPD.`;
+                  notes = `CAPPED WATERFALL: S$${bonusPart.toFixed(0)} earns 4.0 MPD, spillover S$${basePart.toFixed(0)} earns 0.4 MPD. Blended: ${rate} MPD.`;
                 }
               }
             }
           }
+          // 5. UOB Evol Waterfall
+          else if (card.templateId === 'uob-evol') {
+            const prospectiveTotal = currentTotalSpend + targetAmtSGD;
+            const isOnlineOrContactless = calcIsOnline || ['Online Shopping', 'Transport/SimplyGo'].includes(calcCategory);
+            
+            if (prospectiveTotal < 600) {
+              rate = 0.3;
+              notes = `UOB Evol requires S$600 min monthly spend. Currently S$${currentTotalSpend.toFixed(0)}. Base 0.3% applies.`;
+            } else if (isOnlineOrContactless) {
+              // Online category transactions
+              const catTxs = cardTxs.filter(t => t.category === 'Online Shopping');
+              const catSpend = catTxs.reduce((sum, t) => sum + t.amountSGD, 0);
+
+              if (catSpend >= 250) {
+                rate = 0.3;
+                notes = `Online category S$20 cashback cap reached. Base 0.3% applies.`;
+              } else {
+                const remainingLimit = Math.max(0, 250 - catSpend);
+                if (targetAmtSGD <= remainingLimit) {
+                  rate = 8.0;
+                  notes = `Unlocks 8% cashback. S$${remainingLimit.toFixed(0)} cap headroom remaining.`;
+                } else {
+                  const bonusPart = remainingLimit;
+                  const basePart = targetAmtSGD - remainingLimit;
+                  const avgRate = ((bonusPart * 8.0) + (basePart * 0.3)) / targetAmtSGD;
+                  rate = parseFloat(avgRate.toFixed(2));
+                  notes = `CAPPED WATERFALL: S$${bonusPart.toFixed(0)} earns 8%, spillover S$${basePart.toFixed(0)} earns 0.3%. Blended: ${rate}%.`;
+                }
+              }
+            }
+          }
+          // 6. Citi Cash Back Waterfall
+          else if (card.templateId === 'citi-cashback') {
+            const prospectiveTotal = currentTotalSpend + targetAmtSGD;
+            const isGroceriesOrDining = ['Groceries', 'Dining'].includes(calcCategory);
+            const isPetrol = calcCategory === 'Transport/SimplyGo';
+
+            if (prospectiveTotal < 800) {
+              rate = 0.25;
+              notes = `Citi Cash Back requires S$800 min monthly spend. Currently S$${currentTotalSpend.toFixed(0)}. Base 0.25% applies.`;
+            } else if (isGroceriesOrDining || isPetrol) {
+              const targetBonusRate = isPetrol ? 8.0 : 6.0;
+              const capSpendLimit = isPetrol ? 312.50 : 416.67; // S$25 cap limit equivalent
+
+              const catTxs = cardTxs.filter(t => t.category === calcCategory);
+              const catSpend = catTxs.reduce((sum, t) => sum + t.amountSGD, 0);
+
+              if (catSpend >= capSpendLimit) {
+                rate = 0.25;
+                notes = `S$25 category cashback cap reached. Base 0.25% applies.`;
+              } else {
+                const remainingLimit = Math.max(0, capSpendLimit - catSpend);
+                if (targetAmtSGD <= remainingLimit) {
+                  rate = targetBonusRate;
+                  notes = `Unlocks ${targetBonusRate}% cashback. Headroom: S$${remainingLimit.toFixed(0)}.`;
+                } else {
+                  const bonusPart = remainingLimit;
+                  const basePart = targetAmtSGD - remainingLimit;
+                  const avgRate = ((bonusPart * targetBonusRate) + (basePart * 0.25)) / targetAmtSGD;
+                  rate = parseFloat(avgRate.toFixed(2));
+                  notes = `CAPPED WATERFALL: S$${bonusPart.toFixed(0)} earns ${targetBonusRate}%, spillover earns 0.25%. Blended: ${rate}%.`;
+                }
+              }
+            }
+          }
+          // 7. Citi Rewards + Amaze Combo Waterfall
+          else if (card.templateId === 'citi-rewards-amaze') {
+            const isEligible = calcIsOnline || ['Online Shopping', 'Travel', 'Dining'].includes(calcCategory);
+            if (isEligible) {
+              rateType = 'Miles';
+              if (currentTotalSpend >= 1000) {
+                rate = 0.4;
+                notes = `Citi Rewards S$1,000 monthly bonus cap reached. Fallback to base 0.4 MPD.`;
+              } else {
+                const remainingLimit = Math.max(0, 1000 - currentTotalSpend);
+                if (targetAmtSGD <= remainingLimit) {
+                  rate = 4.0;
+                  notes = `Unlocks 4.0 MPD. Headroom: S$${remainingLimit.toFixed(0)} remaining.`;
+                } else {
+                  const bonusPart = remainingLimit;
+                  const basePart = targetAmtSGD - remainingLimit;
+                  const avgRate = ((bonusPart * 4.0) + (basePart * 0.4)) / targetAmtSGD;
+                  rate = parseFloat(avgRate.toFixed(2));
+                  notes = `CAPPED WATERFALL: S$${bonusPart.toFixed(0)} earns 4.0 MPD, spillover S$${basePart.toFixed(0)} earns 0.4 MPD. Blended: ${rate} MPD.`;
+                }
+              }
+            }
+          }
+          // 8. OCBC 365 Waterfall
+          else if (card.templateId === 'ocbc-365') {
+            const prospectiveTotal = currentTotalSpend + targetAmtSGD;
+            const categoryRates = {
+              'Dining': 5.0,
+              'Groceries': 3.0,
+              'Transport/SimplyGo': 3.0,
+              'Utilities': 3.0,
+              'Travel': 3.0
+            };
+            const catRate = categoryRates[calcCategory];
+
+            if (prospectiveTotal < 800) {
+              rate = 0.3;
+              notes = `OCBC 365 requires S$800 min monthly spend. Currently S$${currentTotalSpend.toFixed(0)}. Base 0.3% applies.`;
+            } else if (catRate) {
+              // Checked against global cashback cap of S$80
+              const currentCashback = cardTxs.reduce((sum, t) => {
+                const tRate = categoryRates[t.category] || 0.3;
+                return sum + (t.amountSGD * (tRate / 100));
+              }, 0);
+
+              if (currentCashback >= 80) {
+                rate = 0.3;
+                notes = `S$80 global cashback cap reached. Base 0.3% applies.`;
+              } else {
+                const remainingCashback = Math.max(0, 80 - currentCashback);
+                const maxBonusSpendAllowed = remainingCashback / (catRate / 100);
+
+                if (targetAmtSGD <= maxBonusSpendAllowed) {
+                  rate = catRate;
+                  notes = `Unlocks ${catRate}% cashback. Remaining cap room: S$${remainingCashback.toFixed(2)}.`;
+                } else {
+                  const bonusPart = maxBonusSpendAllowed;
+                  const basePart = targetAmtSGD - maxBonusSpendAllowed;
+                  const avgRate = ((bonusPart * catRate) + (basePart * 0.3)) / targetAmtSGD;
+                  rate = parseFloat(avgRate.toFixed(2));
+                  notes = `CAPPED WATERFALL: S$${bonusPart.toFixed(0)} earns ${catRate}%, spillover S$${basePart.toFixed(0)} earns 0.3%. Blended: ${rate}%.`;
+                }
+              }
+            }
+          }
+          // 9. HSBC Revolution Waterfall
+          else if (card.templateId === 'hsbc-revolution') {
+            const isEligible = calcIsOnline || ['Online Shopping', 'Travel', 'Dining', 'Transport/SimplyGo'].includes(calcCategory);
+            if (isEligible) {
+              rateType = 'Miles';
+              if (currentTotalSpend >= 1000) {
+                rate = 0.4;
+                notes = `HSBC Revolution S$1,000 monthly bonus limit reached. Fallback to base 0.4 MPD.`;
+              } else {
+                const remainingLimit = Math.max(0, 1000 - currentTotalSpend);
+                if (targetAmtSGD <= remainingLimit) {
+                  rate = 4.0;
+                  notes = `Unlocks 4.0 MPD. Headroom: S$${remainingLimit.toFixed(0)} remaining.`;
+                } else {
+                  const bonusPart = remainingLimit;
+                  const basePart = targetAmtSGD - remainingLimit;
+                  const avgRate = ((bonusPart * 4.0) + (basePart * 0.4)) / targetAmtSGD;
+                  rate = parseFloat(avgRate.toFixed(2));
+                  notes = `CAPPED WATERFALL: S$${bonusPart.toFixed(0)} earns 4.0 MPD, spillover S$${basePart.toFixed(0)} earns 0.4 MPD. Blended: ${rate} MPD.`;
+                }
+              }
+            }
+          }
+          // 10. Citi Cash Back+ Catch-all
+          else if (card.templateId === 'citi-cashback-plus') {
+            rate = 1.6;
+            notes = `Unlimited flat-rate 1.6% cashback on all categories. No gates, no caps.`;
+          }
+          // 11. DCS Flexi Card
           else if (card.templateId === 'dcs-flexi') {
             if (calcCategory === 'Foreign Currency' || calcCurrency !== 'SGD') {
               const prospectiveTotal = currentTotalSpend + targetAmtSGD;
@@ -742,20 +927,19 @@
         });
 
         return results.sort((a,b) => b.calculatedRate - a.calculatedRate);
-      }, [wallet, transactions, calcCategory, calcAmount, calcCurrency]);
+      }, [wallet, transactions, calcCategory, calcAmount, calcCurrency, calcIsOnline]);
 
       const handleFastLog = (cardResult) => {
         setTxCardInstanceId(cardResult.docId);
         setTxCategory(calcCategory);
         setTxAmount(calcAmount || '10');
         setTxCurrency(calcCurrency);
-        setTxMerchant(`Optimized ${calcCategory} Swipe`);
+        setTxMerchant(`Optimized Swipe: ${calcCategory}`);
         setTxDate(new Date().toISOString().split('T')[0]);
         setIsLoggingTx(true);
-        showToast("Logged directly from optimizer recommendations!");
+        showToast("Transferred to Ledger Form!");
       };
 
-      // Loading Splash screen to prevent black screens during session checks
       if (loading) {
         return (
           <div className="max-w-md mx-auto bg-brand-dark min-h-screen flex flex-col items-center justify-center p-6 text-center">
@@ -769,7 +953,7 @@
       return (
         <div className="max-w-md mx-auto bg-brand-dark min-h-screen shadow-2xl relative flex flex-col">
           
-          {/* HEADER BAR (REPAIRED & COMPILED SUCCESSFUL) */}
+          {/* HEADER BAR */}
           <header className="p-4 border-b border-slate-850 flex items-center justify-between bg-brand-card/40 backdrop-blur">
             <div className="flex items-center gap-2.5">
               <div className="w-8 h-8 rounded-xl bg-brand-accent/10 flex items-center justify-center text-brand-accent">
@@ -837,7 +1021,7 @@
                     <div className="bg-brand-card/60 backdrop-blur border border-slate-800 rounded-2xl p-4 shadow-xl">
                       <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3 flex items-center gap-1.5">
                         <i data-lucide="calculator" className="w-4 h-4 text-brand-accent"></i>
-                        Optimise Swipe Wise
+                        Swipe Estimator
                       </h3>
                       <div className="grid grid-cols-2 gap-3 mb-3">
                         <div>
@@ -895,7 +1079,7 @@
 
                     <div className="space-y-3">
                       <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center justify-between">
-                        <span>Realtime Optimization Yield Ranked</span>
+                        <span>Ranked Recommendations</span>
                         <span className="text-[10px] font-normal text-brand-accent">{sortedYieldRecommendations.length} Cards Analyzed</span>
                       </h3>
 
@@ -939,13 +1123,13 @@
                             </p>
 
                             <div className="mt-3 flex justify-between items-center pt-2 border-t border-slate-800/60">
-                              <span className="text-[10px] text-slate-500">Includes cycle cap check</span>
+                              <span className="text-[10px] text-slate-500">Includes live Cap logic</span>
                               <button 
                                 onClick={() => handleFastLog(rec)}
                                 className="flex items-center gap-1 bg-brand-accent text-brand-dark text-[10px] font-extrabold px-3 py-1.5 rounded-lg hover:scale-105 transition duration-150"
                               >
                                 <i data-lucide="receipt" className="w-3 h-3"></i>
-                                Log Spend Slip
+                                Log spend to Card
                               </button>
                             </div>
                           </div>
@@ -977,7 +1161,7 @@
                           <i data-lucide="wallet" className="w-8 h-8 mx-auto text-slate-500 mb-3"></i>
                           <p className="text-xs text-slate-400 mb-2">No active cards found in your customized profile.</p>
                           <button onClick={() => setIsAddingCard(true)} className="text-brand-accent text-xs font-bold hover:underline">
-                            Load pre-configured template cards &rarr;
+                            Load SG template cards &rarr;
                           </button>
                         </div>
                       ) : (
@@ -1125,7 +1309,7 @@
                               </div>
                             )}
 
-                            {/* EXPLICIT BENEFITS GUIDE ACCORDION */}
+                            {/* BENEFITS BRIEF ACCORDION */}
                             {preset && (
                               <div className="mt-3 pt-3 border-t border-slate-800/60 bg-slate-900/40 p-3 rounded-xl border border-slate-800">
                                 <h4 className="text-[11px] font-bold text-slate-300 flex items-center gap-1 mb-1.5">
@@ -1325,7 +1509,7 @@
             </div>
           )}
 
-          {/* LEDGER WRITE TRANSACTION MODAL WITH FIXES */}
+          {/* LEDGER WRITE TRANSACTION MODAL */}
           {isLoggingTx && (
             <div className="fixed inset-0 z-50 bg-brand-dark/90 backdrop-blur-sm flex items-end justify-center p-4">
               <form onSubmit={handleSaveTransaction} className="bg-brand-card border border-slate-800 rounded-3xl w-full max-w-sm p-5 space-y-4 shadow-2xl animate-slideUp">
