@@ -1,49 +1,1333 @@
-const CACHE_NAME = 'swipewise-v4';
-const ASSETS = [
-  './',
-  './index.html',
-  './manifest.json',
-  'https://cdn.tailwindcss.com',
-  'https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap',
-  'https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js',
-  'https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js',
-  'https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.24.7/babel.min.js',
-  'https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js',
-  'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js',
-  'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js'
-];
-
-self.addEventListener('install', (e) => {
-  e.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(ASSETS);
-    }).then(() => self.skipWaiting())
-  );
-});
-
-self.addEventListener('activate', (e) => {
-  e.waitUntil(
-    caches.keys().then((keys) => {
-      return Promise.all(
-        keys.map((key) => {
-          if (key !== CACHE_NAME) {
-            return caches.delete(key);
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>SwipeWise | SG Credit Card Yield Optimizer</title>
+  
+  <!-- PWA Meta Tags -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#020617">
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              dark: '#020617',
+              card: '#0f172a',
+              accent: '#10b981',
+              gold: '#f59e0b',
+              red: '#ef4444'
+            }
           }
-        })
-      );
-    }).then(() => self.clients.claim())
-  );
-});
+        }
+      }
+    }
+  </script>
 
-self.addEventListener('fetch', (e) => {
-  e.respondWith(
-    caches.match(e.request).then((cachedResponse) => {
-      return cachedResponse || fetch(e.request).catch(() => {
-        return new Response("Offline Content Unavailable", {
-          status: 503,
-          statusText: "Service Unavailable"
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      -webkit-tap-highlight-color: transparent;
+    }
+    /* Safe Area Spacing for iOS Home Indicator */
+    .pb-safe {
+      padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 4.5rem);
+    }
+  </style>
+
+  <!-- React Dependencies -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js" crossorigin></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js" crossorigin></script>
+  <script src="https://cdnjs.ajax.com/ajax/libs/babel-standalone/7.24.7/babel.min.js" crossorigin></script>
+
+  <!-- Firebase Legacy Compat SDKs (Stable Web Iframe Imports) -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+</head>
+<body class="bg-brand-dark text-slate-100 min-h-screen overflow-x-hidden selection:bg-brand-accent selection:text-brand-dark">
+
+  <div id="root"></div>
+
+  <!-- Lucide Icons Bundle -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <!-- React App Compilation Layer -->
+  <script type="text/babel">
+    const { useState, useEffect, useMemo, useRef } = React;
+
+    // --- 1. FIREBASE CONFIGURATION (VERIFIED API KEY) ---
+    const firebaseConfig = {
+      apiKey: "AIzaSyC9Pq0TwtuRJbNEMAg7wt72fIPuqIJejLs",
+      authDomain: "swipewise-9a6cf.firebaseapp.com",
+      projectId: "swipewise-9a6cf",
+      storageBucket: "swipewise-9a6cf.firebasestorage.app",
+      messagingSenderId: "428823892148",
+      appId: "1:428823892148:web:36c3b09f66f258d2a847e1"
+    };
+
+    const isFirebaseConfigured = firebaseConfig.apiKey && firebaseConfig.apiKey !== "";
+    
+    let db = null;
+    let auth = null;
+    let googleProvider = null;
+
+    if (isFirebaseConfigured) {
+      try {
+        firebase.initializeApp(firebaseConfig);
+        db = firebase.firestore();
+        auth = firebase.auth();
+        googleProvider = new firebase.auth.GoogleAuthProvider();
+      } catch (err) {
+        console.error("Firebase Initialization Error:", err);
+      }
+    }
+
+    // --- 2. 2026 SINGAPORE CARD REFERENCE DATABASE ---
+    const PRESET_CARDS = [
+      {
+        id: 'maybank-ff',
+        name: 'Maybank Friends & Family',
+        issuer: 'Maybank',
+        type: 'Cashback',
+        baseRate: 0.3,
+        bonusRate: 8.0,
+        minSpend: 800,
+        globalCap: 125, // Absolute cash cap of S$125 with S$800 min spend, S$375 cap on each category
+        categories: ['Groceries', 'Dining', 'Transport/SimplyGo', 'Online Shopping', 'Travel'],
+        requiresSelection: true,
+        maxSelectable: 5,
+        defaultSelectedCategories: ['Groceries', 'Dining', 'Transport/SimplyGo'],
+        desc: '8% Cashback on 5 selected categories up to S$125 overall rebate cap.'
+      },
+      {
+        id: 'uob-one',
+        name: 'UOB One Card',
+        issuer: 'UOB',
+        type: 'Cashback',
+        baseRate: 3.33,
+        bonusRate: 10.0, // Up to 10% on partner merchants (Grab, Shopee, SimplyGo, SP Group)
+        minSpend: 600, // Tiers: S$600, S$1000, S$2000
+        globalCap: 100, // Quarterly cash reward cap
+        categories: ['Groceries', 'Dining', 'Transport/SimplyGo', 'Utilities', 'Online Shopping'],
+        requiresSelection: false,
+        desc: 'Up to 10% on partners with S$500/S$1,000/S$2,000 monthly spend tiers.'
+      },
+      {
+        id: 'hsbc-liveplus',
+        name: 'HSBC Live+ Card',
+        issuer: 'HSBC',
+        type: 'Cashback',
+        baseRate: 0.3,
+        bonusRate: 8.0,
+        minSpend: 600,
+        globalCap: 250, // S$250 per quarter cap
+        categories: ['Dining', 'Shopping', 'Entertainment'],
+        requiresSelection: false,
+        desc: '8% cashback on Dining, Shopping & Entertainment globally.'
+      },
+      {
+        id: 'hsbc-revolution',
+        name: 'HSBC Revolution',
+        issuer: 'HSBC',
+        type: 'Miles',
+        baseRate: 0.4,
+        bonusRate: 4.0, // 4 mpd on online/contactless
+        minSpend: 0,
+        globalCap: 1000, // Caps out on S$1,000 spend
+        categories: ['Online Shopping', 'Travel', 'Dining', 'Groceries'],
+        requiresSelection: false,
+        desc: '4 mpd (9x Bonus Points) on contactless and online transactions up to S$1,000 monthly.'
+      },
+      {
+        id: 'dcs-flexi',
+        name: 'DCS Flexi Card',
+        issuer: 'DCS',
+        type: 'Cashback',
+        baseRate: 0.5,
+        bonusRate: 8.0,
+        minSpend: 500,
+        globalCap: 50,
+        categories: ['Foreign Currency', 'Dining', 'Shopping'],
+        requiresSelection: false,
+        desc: '8% cash rebate on foreign currency transactions up to a sub-cap.'
+      },
+      {
+        id: 'uob-ladys-solitaire',
+        name: "UOB Lady's Solitaire",
+        issuer: 'UOB',
+        type: 'Miles',
+        baseRate: 0.4,
+        bonusRate: 4.0, // 4 mpd on selected category
+        minSpend: 0,
+        globalCap: 2000, // Solitaire cap S$2,000 spend
+        categories: ['Dining', 'Travel', 'Shopping', 'Beauty', 'Transport/SimplyGo', 'Entertainment', 'Family'],
+        requiresSelection: true,
+        maxSelectable: 2,
+        defaultSelectedCategories: ['Dining', 'Travel'],
+        desc: '4 mpd (10 UNI$) on up to 2 selected categories. High S$2,000 cap.'
+      }
+    ];
+
+    const TRANSACTION_CATEGORIES = [
+      'Dining', 'Groceries', 'Online Shopping', 'Transport/SimplyGo', 'Travel', 'Utilities', 'Foreign Currency', 'Retail/General'
+    ];
+
+    // --- 3. ROOT REACT APPLICATION ---
+    function App() {
+      // User State
+      const [user, setUser] = useState(null);
+      const [loading, setLoading] = useState(true);
+      const [networkOnline, setNetworkOnline] = useState(navigator.onLine);
+
+      // Active Tab
+      const [activeTab, setActiveTab] = useState('home'); // 'home', 'wallet', 'analysis', 'logs'
+
+      // Application Domain States
+      const [wallet, setWallet] = useState([]);
+      const [transactions, setTransactions] = useState([]);
+
+      // Calculator Input Panel
+      const [calcCategory, setCalcCategory] = useState('Dining');
+      const [calcAmount, setCalcAmount] = useState('');
+      const [calcCurrency, setCalcCurrency] = useState('SGD');
+      const [calcIsOnline, setCalcIsOnline] = useState(false);
+      const [calcResult, setCalcResult] = useState(null);
+
+      // Add Card modal & Configuration UI
+      const [isAddingCard, setIsAddingCard] = useState(false);
+      const [editingCardInstanceId, setEditingCardInstanceId] = useState(null);
+      const [configCardTemplate, setConfigCardTemplate] = useState(null);
+      const [configCategories, setConfigCategories] = useState([]);
+      const [configBillingCycle, setConfigBillingCycle] = useState(1);
+      const [configCustomCap, setConfigCustomCap] = useState('');
+
+      // Transaction Logging Modal
+      const [isLoggingTx, setIsLoggingTx] = useState(false);
+      const [txCardInstanceId, setTxCardInstanceId] = useState('');
+      const [txCategory, setTxCategory] = useState('Dining');
+      const [txAmount, setTxAmount] = useState('');
+      const [txCurrency, setTxCurrency] = useState('SGD');
+      const [txMerchant, setTxMerchant] = useState('');
+      const [txDate, setTxDate] = useState(new Date().toISOString().split('T')[0]);
+      const [txEditingId, setTxEditingId] = useState(null);
+
+      // Global Notification/Modal System
+      const [feedbackMsg, setFeedbackMsg] = useState(null);
+
+      // Network Offline State Monitor
+      useEffect(() => {
+        const handleOnline = () => setNetworkOnline(true);
+        const handleOffline = () => setNetworkOnline(false);
+        window.addEventListener('online', handleOnline);
+        window.addEventListener('offline', handleOffline);
+        return () => {
+          window.removeEventListener('online', handleOnline);
+          window.removeEventListener('offline', handleOffline);
+        };
+      }, []);
+
+      // Sign-in Status Monitor
+      useEffect(() => {
+        if (!isFirebaseConfigured) {
+          setUser({
+            uid: 'dev-user-123',
+            displayName: 'Ah Xi',
+            email: 'ahxi@swipewise.sg',
+            photoURL: 'https://placehold.co/100x100/10b981/020617?text=AX'
+          });
+          setLoading(false);
+          return;
+        }
+
+        const unsubscribe = auth.onAuthStateChanged((usr) => {
+          setUser(usr);
+          setLoading(false);
         });
-      });
-    })
-  );
-});
+        return () => unsubscribe();
+      }, []);
+
+      // Pull Firebase Realtime Updates Hook
+      useEffect(() => {
+        if (!user) return;
+
+        if (!isFirebaseConfigured) {
+          const localWallet = localStorage.getItem(`swipewise_wallet_${user.uid}`);
+          const localTxs = localStorage.getItem(`swipewise_txs_${user.uid}`);
+          setWallet(localWallet ? JSON.parse(localWallet) : []);
+          setTransactions(localTxs ? JSON.parse(localTxs) : []);
+          return;
+        }
+
+        // Fetch User Wallet List Realtime
+        const walletUnsubscribe = db.collection('users').doc(user.uid).collection('wallet')
+          .onSnapshot((snapshot) => {
+            const list = [];
+            snapshot.forEach((doc) => list.push({ docId: doc.id, ...doc.data() }));
+            setWallet(list);
+          }, (err) => showToast("Database Sync Error: " + err.message));
+
+        // Fetch Transactions List Realtime
+        const txUnsubscribe = db.collection('users').doc(user.uid).collection('transactions')
+          .onSnapshot((snapshot) => {
+            const list = [];
+            snapshot.forEach((doc) => list.push({ docId: doc.id, ...doc.data() }));
+            const sorted = list.sort((a,b) => new Date(b.date) - new Date(a.date));
+            setTransactions(sorted);
+          }, (err) => showToast("Database Load Block: " + err.message));
+
+        return () => {
+          walletUnsubscribe();
+          txUnsubscribe();
+        };
+      }, [user]);
+
+      // Trigger temporary Toast notifications
+      const showToast = (msg) => {
+        setFeedbackMsg(msg);
+        setTimeout(() => setFeedbackMsg(null), 4000);
+      };
+
+      // Handle Authentication triggers
+      const handleGoogleLogin = async () => {
+        if (!isFirebaseConfigured) {
+          showToast("Local Sandbox Mode Active");
+          return;
+        }
+        try {
+          await auth.signInWithPopup(googleProvider);
+        } catch (err) {
+          showToast("Auth failed: " + err.message);
+        }
+      };
+
+      const handleLogout = async () => {
+        if (!isFirebaseConfigured) {
+          setUser(null);
+          return;
+        }
+        await auth.signOut();
+      };
+
+      // Exchange Conversion Utilities
+      const convertToSGD = (amount, currency) => {
+        const value = parseFloat(amount) || 0;
+        const rates = { SGD: 1.0, MYR: 0.31, USD: 1.34, EUR: 1.45, JPY: 0.0089 };
+        return value * (rates[currency] || 1.0);
+      };
+
+      // Add/Update User Cards to Wallet Config
+      const handleSaveCardSetup = async () => {
+        if (!configCardTemplate) return;
+        
+        const payload = {
+          templateId: configCardTemplate.id,
+          name: configCardTemplate.name,
+          issuer: configCardTemplate.issuer,
+          type: configCardTemplate.type,
+          baseRate: configCardTemplate.baseRate,
+          bonusRate: configCardTemplate.bonusRate,
+          globalCap: configCardTemplate.globalCap,
+          customCap: parseFloat(configCustomCap) || configCardTemplate.globalCap,
+          billingCycleDate: parseInt(configBillingCycle) || 1,
+          selectedCategories: configCategories,
+          updatedAt: new Date().toISOString()
+        };
+
+        if (!isFirebaseConfigured) {
+          const updated = [...wallet];
+          if (editingCardInstanceId) {
+            const idx = updated.findIndex(c => c.docId === editingCardInstanceId);
+            updated[idx] = { ...updated[idx], ...payload };
+          } else {
+            updated.push({ docId: Date.now().toString(), ...payload });
+          }
+          setWallet(updated);
+          localStorage.setItem(`swipewise_wallet_${user.uid}`, JSON.stringify(updated));
+          closeConfigModal();
+          showToast("Card portfolio updated locally!");
+          return;
+        }
+
+        try {
+          if (editingCardInstanceId) {
+            await db.collection('users').doc(user.uid).collection('wallet').doc(editingCardInstanceId).update(payload);
+          } else {
+            await db.collection('users').doc(user.uid).collection('wallet').add(payload);
+          }
+          closeConfigModal();
+          showToast("Wallet setup synced successfully!");
+        } catch (err) {
+          showToast("Failed syncing card: " + err.message);
+        }
+      };
+
+      const closeConfigModal = () => {
+        setIsAddingCard(false);
+        setEditingCardInstanceId(null);
+        setConfigCardTemplate(null);
+        setConfigCategories([]);
+        setConfigBillingCycle(1);
+        setConfigCustomCap('');
+      };
+
+      const handleRemoveCard = async (docId) => {
+        if (!window.confirm("Are you sure you want to remove this card from your wallet?")) return;
+        if (!isFirebaseConfigured) {
+          const updated = wallet.filter(c => c.docId !== docId);
+          setWallet(updated);
+          localStorage.setItem(`swipewise_wallet_${user.uid}`, JSON.stringify(updated));
+          showToast("Card removed locally.");
+          return;
+        }
+        await db.collection('users').doc(user.uid).collection('wallet').doc(docId).delete();
+        showToast("Card removed from cloud.");
+      };
+
+      // Transaction CRUD actions
+      const handleSaveTransaction = async (e) => {
+        e.preventDefault();
+        const amtSGD = convertToSGD(txAmount, txCurrency);
+        const payload = {
+          cardInstanceId: txCardInstanceId,
+          category: txCategory,
+          merchant: txMerchant || 'Retail Spending',
+          amount: parseFloat(txAmount),
+          currency: txCurrency,
+          amountSGD: amtSGD,
+          date: txDate,
+          updatedAt: new Date().toISOString()
+        };
+
+        if (!isFirebaseConfigured) {
+          const updated = [...transactions];
+          if (txEditingId) {
+            const idx = updated.findIndex(t => t.docId === txEditingId);
+            updated[idx] = { ...updated[idx], ...payload };
+          } else {
+            updated.push({ docId: Date.now().toString(), ...payload });
+          }
+          setTransactions(updated);
+          localStorage.setItem(`swipewise_txs_${user.uid}`, JSON.stringify(updated));
+          closeTxForm();
+          showToast("Logged successfully!");
+          return;
+        }
+
+        try {
+          if (txEditingId) {
+            await db.collection('users').doc(user.uid).collection('transactions').doc(txEditingId).update(payload);
+          } else {
+            await db.collection('users').doc(user.uid).collection('transactions').add(payload);
+          }
+          closeTxForm();
+          showToast("Transaction synced with Cloud Ledger!");
+        } catch (err) {
+          showToast("Network Error logging transaction: " + err.message);
+        }
+      };
+
+      const closeTxForm = () => {
+        setIsLoggingTx(false);
+        setTxEditingId(null);
+        setTxAmount('');
+        setTxMerchant('');
+        setTxCardInstanceId('');
+      };
+
+      const handleEditTx = (tx) => {
+        setTxEditingId(tx.docId);
+        setTxCardInstanceId(tx.cardInstanceId);
+        setTxCategory(tx.category);
+        setTxAmount(tx.amount);
+        setTxCurrency(tx.currency);
+        setTxMerchant(tx.merchant);
+        setTxDate(tx.date);
+        setIsLoggingTx(true);
+      };
+
+      const handleDeleteTx = async (docId) => {
+        if (!window.confirm("Delete this spending entry?")) return;
+        if (!isFirebaseConfigured) {
+          const updated = transactions.filter(t => t.docId !== docId);
+          setTransactions(updated);
+          localStorage.setItem(`swipewise_txs_${user.uid}`, JSON.stringify(updated));
+          showToast("Entry removed locally.");
+          return;
+        }
+        await db.collection('users').doc(user.uid).collection('transactions').doc(docId).delete();
+        showToast("Entry removed.");
+      };
+
+      // Custom Billing/Statement Period Filter logic
+      const getTransactionsForCardCycle = (card, allTxs) => {
+        const cycleDay = card.billingCycleDate || 1;
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = now.getMonth();
+
+        let start, end;
+        if (now.getDate() >= cycleDay) {
+          start = new Date(year, month, cycleDay);
+          end = new Date(year, month + 1, cycleDay - 1, 23, 59, 59);
+        } else {
+          start = new Date(year, month - 1, cycleDay);
+          end = new Date(year, month, cycleDay - 1, 23, 59, 59);
+        }
+
+        return allTxs.filter(tx => {
+          if (tx.cardInstanceId !== card.docId) return false;
+          const tDate = new Date(tx.date);
+          return tDate >= start && tDate <= end;
+        });
+      };
+
+      // --- 4. PRECISION YIELD ENGINE CORE LOGIC ---
+      const sortedYieldRecommendations = useMemo(() => {
+        if (wallet.length === 0) return [];
+        const targetAmt = parseFloat(calcAmount) || 0;
+        const targetAmtSGD = convertToSGD(targetAmt, calcCurrency);
+
+        const results = wallet.map(card => {
+          const cardTxs = getTransactionsForCardCycle(card, transactions);
+          const currentTotalSpend = cardTxs.reduce((sum, t) => sum + t.amountSGD, 0);
+          
+          let rate = card.baseRate;
+          let notes = `Default Base Rate of ${card.baseRate}% applied.`;
+          let rateType = card.type;
+          
+          const isTargetCategoryActive = card.selectedCategories && card.selectedCategories.includes(calcCategory);
+
+          if (card.templateId === 'maybank-ff') {
+            const catTxs = cardTxs.filter(t => t.category === calcCategory);
+            const catSpend = catTxs.reduce((sum, t) => sum + t.amountSGD, 0);
+            
+            if (isTargetCategoryActive) {
+              if (currentTotalSpend < 800) {
+                rate = 0.3;
+                notes = `Maybank minimum spend is S$800. Currently S$${currentTotalSpend.toFixed(0)} spent. Base 0.3% rate applies.`;
+              } else if (catSpend >= 375) {
+                rate = 0.3;
+                notes = `S$375 cap reached for ${calcCategory}. Base 0.3% rate applies.`;
+              } else {
+                rate = 8.0;
+                const rem = 375 - catSpend;
+                notes = `Yield: 8% Cashback. S$${rem.toFixed(0)} cap headroom remaining for ${calcCategory}.`;
+              }
+            }
+          } 
+          else if (card.templateId === 'uob-one') {
+            const isPartner = ['Groceries', 'Transport/SimplyGo', 'Online Shopping'].includes(calcCategory);
+            
+            if (currentTotalSpend < 500) {
+              rate = 3.33;
+              notes = `Pending UOB One S$500 spend gate. Currently at S$${currentTotalSpend.toFixed(0)}. Base rate 3.33% applies.`;
+            } else {
+              rate = isPartner ? 10.0 : 5.0;
+              notes = `Meets UOB spend gate. Multiplier active: ${rate}% cashback on ${calcCategory}.`;
+            }
+          }
+          else if (card.templateId === 'hsbc-liveplus') {
+            if (currentTotalSpend < 600) {
+              rate = 0.3;
+              notes = `HSBC Live+ requires S$600 min. Currently S$${currentTotalSpend.toFixed(0)}. Base rate applies.`;
+            } else if (['Dining', 'Groceries'].includes(calcCategory)) {
+              rate = 8.0;
+              notes = `HSBC Live+ 8.0% cashback tier unlocked. Current spend S$${currentTotalSpend.toFixed(0)}.`;
+            }
+          }
+          else if (card.templateId === 'hsbc-revolution') {
+            if (['Online Shopping', 'Travel', 'Dining'].includes(calcCategory)) {
+              if (currentTotalSpend < 1000) {
+                rate = 4.0;
+                rateType = 'Miles';
+                notes = `4.0 MPD. You have S$${(1000 - currentTotalSpend).toFixed(0)} left before S$1,000 monthly bonus cap.`;
+              } else {
+                rate = 0.4;
+                rateType = 'Miles';
+                notes = `HSBC Revolution S$1,000 bonus limit exceeded. Base 0.4 MPD applies.`;
+              }
+            }
+          }
+          else if (card.templateId === 'uob-ladys-solitaire') {
+            if (isTargetCategoryActive) {
+              if (currentTotalSpend < 2000) {
+                rate = 4.0;
+                rateType = 'Miles';
+                notes = `4.0 MPD active. Multiplier headroom: S$${(2000 - currentTotalSpend).toFixed(0)} remaining.`;
+              } else {
+                rate = 0.4;
+                rateType = 'Miles';
+                notes = `Lady's S$2,000 bonus limit met. Downgraded to base 0.4 MPD.`;
+              }
+            }
+          }
+          else if (card.templateId === 'dcs-flexi') {
+            if (calcCategory === 'Foreign Currency' || calcCurrency !== 'SGD') {
+              if (currentTotalSpend < 500) {
+                rate = 0.5;
+                notes = `Requires S$500 min spend. S$${currentTotalSpend.toFixed(0)} processed. Base rate active.`;
+              } else {
+                rate = 8.0;
+                notes = `8.0% foreign transaction rewards active.`;
+              }
+            }
+          }
+
+          return {
+            ...card,
+            calculatedRate: rate,
+            calculatedType: rateType,
+            notes
+          };
+        });
+
+        return results.sort((a,b) => b.calculatedRate - a.calculatedRate);
+      }, [wallet, transactions, calcCategory, calcAmount, calcCurrency]);
+
+      const handleFastLog = (cardResult) => {
+        setTxCardInstanceId(cardResult.docId);
+        setTxCategory(calcCategory);
+        setTxAmount(calcAmount || '10');
+        setTxCurrency(calcCurrency);
+        setTxMerchant(`Optimized ${calcCategory} Swipe`);
+        setTxDate(new Date().toISOString().split('T')[0]);
+        setIsLoggingTx(true);
+        showToast("Form ready to save optimization!");
+      };
+
+      return (
+        <div className="max-w-md mx-auto bg-brand-dark min-h-screen shadow-2xl relative flex flex-col">
+          
+          {/* TOP HEADER */}
+          <header className="sticky top-0 z-40 bg-brand-dark/80 backdrop-blur-md border-b border-slate-800/80 px-4 py-3 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="p-1.5 bg-brand-accent/20 rounded-lg text-brand-accent">
+                <i data-lucide="zap" className="w-5 h-5"></i>
+              </span>
+              <div>
+                <h1 className="text-lg font-extrabold tracking-tight text-white flex items-center gap-1.5">
+                  SwipeWise
+                  <span className="text-[10px] uppercase font-bold tracking-widest bg-brand-accent/20 text-brand-accent px-1.5 py-0.5 rounded-full">SG</span>
+                </h1>
+                <p className="text-[10px] text-slate-400">Singapore Reward Maximizer</p>
+              </div>
+            </div>
+
+            {/* CONNECTION INDICATOR */}
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5">
+                <span className={`w-2 h-2 rounded-full ${networkOnline ? 'bg-brand-accent' : 'bg-brand-red'} animate-pulse`}></span>
+                <span className="text-[9px] text-slate-400 font-semibold">{networkOnline ? 'Sync OK' : 'Local Only'}</span>
+              </div>
+              {user && (
+                <button onClick={handleLogout} className="p-1.5 hover:bg-slate-800 rounded-lg text-slate-400 transition" title="Log Out">
+                  <i data-lucide="log-out" className="w-4 h-4"></i>
+                </button>
+              )}
+            </div>
+          </header>
+
+          {/* MAIN PAGE VIEW SCROLLER */}
+          <main className="flex-1 overflow-y-auto px-4 pt-4 pb-safe">
+            
+            {!user ? (
+              <div className="flex flex-col items-center justify-center py-16 px-4 text-center">
+                <div className="p-4 bg-brand-accent/10 rounded-full text-brand-accent mb-6 animate-bounce">
+                  <i data-lucide="shield-check" className="w-12 h-12"></i>
+                </div>
+                <h2 className="text-xl font-bold mb-2">Secure Cloud Optimizer</h2>
+                <p className="text-sm text-slate-400 mb-8 max-w-sm">
+                  Log in safely to build your credit cards portfolio, manage statement cycles, and track cashback/miles yield safely on your devices.
+                </p>
+                <button 
+                  onClick={handleGoogleLogin}
+                  className="w-full flex items-center justify-center gap-3 bg-white text-slate-900 font-bold py-3.5 px-6 rounded-xl shadow-lg hover:bg-slate-100 transition duration-200"
+                >
+                  <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" className="w-5 h-5" alt="Google Logo" />
+                  Continue with Google
+                </button>
+                <div className="mt-6">
+                  <button 
+                    onClick={() => {
+                      setUser({
+                        uid: 'anonymous-hustler',
+                        displayName: 'Local Optimizer',
+                        email: 'sandbox@swipewise.sg'
+                      });
+                      showToast("Active inside private mock browser sandbox.");
+                    }} 
+                    className="text-xs text-brand-accent/80 hover:underline"
+                  >
+                    Use Local Sandbox Mode Instead
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <>
+                {/* TAB 1: YIELD CALCULATOR ENGINE */}
+                {activeTab === 'home' && (
+                  <div className="space-y-5 animate-fadeIn">
+                    <div className="bg-brand-card/60 backdrop-blur border border-slate-800 rounded-2xl p-4 shadow-xl">
+                      <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3 flex items-center gap-1.5">
+                        <i data-lucide="calculator" className="w-4 h-4 text-brand-accent"></i>
+                        Optimise Swipe Wise
+                      </h3>
+                      <div className="grid grid-cols-2 gap-3 mb-3">
+                        <div>
+                          <label className="text-[10px] text-slate-400 block mb-1">Category</label>
+                          <select 
+                            value={calcCategory} 
+                            onChange={(e) => setCalcCategory(e.target.value)}
+                            className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2.5 text-xs font-medium text-white focus:outline-none focus:border-brand-accent"
+                          >
+                            {TRANSACTION_CATEGORIES.map(cat => (
+                              <option key={cat} value={cat}>{cat}</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div>
+                          <label className="text-[10px] text-slate-400 block mb-1">Estimated Spending</label>
+                          <div className="relative">
+                            <span className="absolute left-3 top-2.5 text-xs text-slate-500 font-bold">$</span>
+                            <input 
+                              type="number" 
+                              placeholder="0.00" 
+                              value={calcAmount} 
+                              onChange={(e) => setCalcAmount(e.target.value)}
+                              className="w-full bg-slate-900 border border-slate-800 rounded-xl pl-6 pr-3 py-2.5 text-xs text-white focus:outline-none focus:border-brand-accent" 
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="text-[10px] text-slate-400 block mb-1">Currency</label>
+                          <select 
+                            value={calcCurrency} 
+                            onChange={(e) => setCalcCurrency(e.target.value)}
+                            className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2.5 text-xs font-medium text-white focus:outline-none focus:border-brand-accent"
+                          >
+                            <option value="SGD">SGD</option>
+                            <option value="MYR">MYR</option>
+                            <option value="USD">USD</option>
+                            <option value="JPY">JPY</option>
+                          </select>
+                        </div>
+                        <div className="flex items-center justify-between bg-slate-900 border border-slate-800 rounded-xl px-3 mt-4">
+                          <span className="text-[10px] text-slate-400">Online/App Tx</span>
+                          <input 
+                            type="checkbox" 
+                            checked={calcIsOnline} 
+                            onChange={(e) => setCalcIsOnline(e.target.checked)}
+                            className="w-4 h-4 rounded text-brand-accent focus:ring-brand-accent bg-slate-800 border-slate-700" 
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="space-y-3">
+                      <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center justify-between">
+                        <span>Realtime Optimization Yield Ranked</span>
+                        <span className="text-[10px] font-normal text-brand-accent">{sortedYieldRecommendations.length} Cards Analyzed</span>
+                      </h3>
+
+                      {sortedYieldRecommendations.length === 0 ? (
+                        <div className="bg-brand-card/40 border border-dashed border-slate-800 rounded-xl p-8 text-center">
+                          <p className="text-xs text-slate-400 mb-3">No active cards found in your SwipeWise portfolio.</p>
+                          <button onClick={() => setActiveTab('wallet')} className="bg-brand-accent/20 text-brand-accent text-xs font-bold px-4 py-2 rounded-lg hover:bg-brand-accent/30 transition">
+                            Setup Card Portfolio Now
+                          </button>
+                        </div>
+                      ) : (
+                        sortedYieldRecommendations.map((rec, index) => (
+                          <div 
+                            key={rec.docId}
+                            className={`border rounded-2xl p-4 relative overflow-hidden transition-all duration-200 ${
+                              index === 0 
+                                ? 'bg-gradient-to-br from-slate-900 via-emerald-950/40 to-slate-900 border-brand-accent shadow-lg shadow-brand-accent/10' 
+                                : 'bg-brand-card/40 border-slate-800'
+                            }`}
+                          >
+                            {index === 0 && (
+                              <div className="absolute top-0 right-0 bg-brand-accent text-brand-dark text-[8px] font-extrabold px-3 py-1 rounded-bl-xl tracking-wider uppercase">
+                                Best Choice
+                              </div>
+                            )}
+
+                            <div className="flex justify-between items-start mb-2">
+                              <div>
+                                <h4 className="text-sm font-bold text-white">{rec.name}</h4>
+                                <p className="text-[10px] text-slate-400">{rec.issuer} &bull; Bill Cycle Day: {rec.billingCycleDate}</p>
+                              </div>
+                              <div className="text-right">
+                                <span className={`text-sm font-black ${rec.calculatedType === 'Miles' ? 'text-brand-gold' : 'text-brand-accent'}`}>
+                                  {rec.calculatedRate}% {rec.calculatedType}
+                                </span>
+                              </div>
+                            </div>
+
+                            <p className="text-xs text-slate-300 mt-2 bg-slate-900/60 p-2.5 rounded-lg border border-slate-800/80">
+                              {rec.notes}
+                            </p>
+
+                            <div className="mt-3 flex justify-between items-center pt-2 border-t border-slate-800/60">
+                              <span className="text-[10px] text-slate-500">Includes active cycle tracks</span>
+                              <button 
+                                onClick={() => handleFastLog(rec)}
+                                className="flex items-center gap-1 bg-brand-accent text-brand-dark text-[10px] font-extrabold px-3 py-1.5 rounded-lg hover:scale-105 transition duration-150"
+                              >
+                                <i data-lucide="zap-fast" className="w-3 h-3"></i>
+                                Log This Payment
+                              </button>
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* TAB 2: WALLET CONFIGURATION */}
+                {activeTab === 'wallet' && (
+                  <div className="space-y-4 animate-fadeIn">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h2 className="text-md font-bold text-white">My Smart Wallet</h2>
+                        <p className="text-xs text-slate-400">Configure and link Singapore cards.</p>
+                      </div>
+                      <button 
+                        onClick={() => setIsAddingCard(true)}
+                        className="bg-brand-accent text-brand-dark text-xs font-bold px-3 py-2 rounded-xl flex items-center gap-1 shadow-lg shadow-brand-accent/10"
+                      >
+                        <i data-lucide="plus" className="w-3.5 h-3.5"></i> Add Card
+                      </button>
+                    </div>
+
+                    <div className="space-y-3">
+                      {wallet.length === 0 ? (
+                        <div className="bg-brand-card/40 border border-dashed border-slate-800 rounded-xl p-8 text-center">
+                          <i data-lucide="wallet" className="w-8 h-8 mx-auto text-slate-500 mb-3"></i>
+                          <p className="text-xs text-slate-400 mb-2">No active cards found in your customized profile.</p>
+                          <button onClick={() => setIsAddingCard(true)} className="text-brand-accent text-xs font-bold hover:underline">
+                            Load pre-configured template cards &rarr;
+                          </button>
+                        </div>
+                      ) : (
+                        wallet.map(card => (
+                          <div key={card.docId} className="bg-brand-card/60 backdrop-blur border border-slate-800 rounded-2xl p-4 shadow-md">
+                            <div className="flex justify-between items-start mb-2">
+                              <div>
+                                <span className="text-[9px] uppercase font-bold text-brand-accent bg-brand-accent/10 px-2 py-0.5 rounded-full">
+                                  {card.type} Card
+                                </span>
+                                <h3 className="text-sm font-bold text-white mt-1">{card.name}</h3>
+                                <p className="text-[10px] text-slate-400">Issuer: {card.issuer} &bull; Statement Date: {card.billingCycleDate}</p>
+                              </div>
+                              <div className="flex gap-2">
+                                <button 
+                                  onClick={() => {
+                                    setEditingCardInstanceId(card.docId);
+                                    const orig = PRESET_CARDS.find(p => p.id === card.templateId);
+                                    setConfigCardTemplate(orig);
+                                    setConfigCategories(card.selectedCategories || []);
+                                    setConfigBillingCycle(card.billingCycleDate);
+                                    setConfigCustomCap(card.customCap || '');
+                                    setIsAddingCard(true);
+                                  }}
+                                  className="p-1 text-slate-400 hover:text-white"
+                                >
+                                  <i data-lucide="edit-3" className="w-4 h-4"></i>
+                                </button>
+                                <button 
+                                  onClick={() => handleRemoveCard(card.docId)}
+                                  className="p-1 text-slate-400 hover:text-brand-red"
+                                >
+                                  <i data-lucide="trash-2" className="w-4 h-4"></i>
+                                </button>
+                              </div>
+                            </div>
+
+                            {card.selectedCategories && card.selectedCategories.length > 0 && (
+                              <div className="mt-2.5 flex flex-wrap gap-1.5">
+                                {card.selectedCategories.map(cat => (
+                                  <span key={cat} className="text-[9px] bg-slate-900 border border-slate-800 text-slate-300 px-2 py-0.5 rounded-md">
+                                    {cat}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* TAB 3: SMART PROGRESS METRICS */}
+                {activeTab === 'analysis' && (
+                  <div className="space-y-5 animate-fadeIn">
+                    <div>
+                      <h2 className="text-md font-bold text-white">Spend Gate Analysis</h2>
+                      <p className="text-xs text-slate-400">Statement cycle progress tracking metrics.</p>
+                    </div>
+
+                    {wallet.length === 0 ? (
+                      <div className="bg-brand-card/40 border border-dashed border-slate-800 rounded-xl p-8 text-center">
+                        <p className="text-xs text-slate-400">Configure cards to begin automated cycle analytics.</p>
+                      </div>
+                    ) : (
+                      wallet.map(card => {
+                        const cardTxs = getTransactionsForCardCycle(card, transactions);
+                        const totalSpend = cardTxs.reduce((sum, t) => sum + t.amountSGD, 0);
+
+                        return (
+                          <div key={card.docId} className="bg-brand-card/60 border border-slate-800 rounded-2xl p-4 space-y-4 shadow-sm">
+                            <div className="flex justify-between items-center">
+                              <div>
+                                <h3 className="text-xs font-bold text-white">{card.name}</h3>
+                                <p className="text-[9px] text-slate-500">Custom Statement Period Spending</p>
+                              </div>
+                              <span className="text-xs font-bold text-slate-300">
+                                S$ {totalSpend.toFixed(0)} / S$ {card.customCap || card.globalCap}
+                              </span>
+                            </div>
+
+                            {card.templateId === 'maybank-ff' && (
+                              <div className="space-y-3">
+                                <div className="space-y-1">
+                                  <div className="flex justify-between text-[10px] text-slate-400">
+                                    <span>Min Spend Requirement</span>
+                                    <span>{totalSpend >= 800 ? '✅ UNLOCKED' : `S$${(800 - totalSpend).toFixed(0)} Left`}</span>
+                                  </div>
+                                  <div className="w-full bg-slate-900 h-2 rounded-full overflow-hidden">
+                                    <div 
+                                      className={`h-full ${totalSpend >= 800 ? 'bg-brand-accent' : 'bg-brand-gold'}`}
+                                      style={{ width: `${Math.min((totalSpend/800)*100, 100)}%` }}
+                                    ></div>
+                                  </div>
+                                </div>
+
+                                {card.selectedCategories.map(cat => {
+                                  const catSpend = cardTxs.filter(t => t.category === cat).reduce((sum, t) => sum + t.amountSGD, 0);
+                                  return (
+                                    <div key={cat} className="space-y-1">
+                                      <div className="flex justify-between text-[9px] text-slate-500">
+                                        <span>Category: {cat}</span>
+                                        <span>S${catSpend.toFixed(0)} / S$375</span>
+                                      </div>
+                                      <div className="w-full bg-slate-900 h-1.5 rounded-full overflow-hidden">
+                                        <div 
+                                          className="h-full bg-brand-accent/80"
+                                          style={{ width: `${Math.min((catSpend/375)*100, 100)}%` }}
+                                        ></div>
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            )}
+
+                            {card.templateId === 'uob-one' && (
+                              <div className="space-y-3">
+                                <div className="space-y-1">
+                                  <div className="flex justify-between text-[10px] text-slate-400">
+                                    <span>Min Spend Gate Target S$500</span>
+                                    <span>{totalSpend >= 500 ? '✅ Tier 1 Met' : `S$${(500 - totalSpend).toFixed(0)} Left`}</span>
+                                  </div>
+                                  <div className="w-full bg-slate-900 h-2 rounded-full overflow-hidden">
+                                    <div 
+                                      className="h-full bg-brand-accent"
+                                      style={{ width: `${Math.min((totalSpend/500)*100, 100)}%` }}
+                                    ></div>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+
+                            {card.templateId !== 'maybank-ff' && card.templateId !== 'uob-one' && (
+                              <div className="space-y-1">
+                                <div className="w-full bg-slate-900 h-2 rounded-full overflow-hidden">
+                                  <div 
+                                    className="h-full bg-brand-accent"
+                                    style={{ width: `${Math.min((totalSpend / (card.customCap || 1000)) * 100, 100)}%` }}
+                                  ></div>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+                )}
+
+                {/* TAB 4: TRANSACTION LEDGER FORM & HISTORY */}
+                {activeTab === 'logs' && (
+                  <div className="space-y-4 animate-fadeIn">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h2 className="text-md font-bold text-white">Hustle Ledger</h2>
+                        <p className="text-xs text-slate-400">Add, edit and monitor card transactions.</p>
+                      </div>
+                      <button 
+                        onClick={() => {
+                          setTxEditingId(null);
+                          setTxAmount('');
+                          setTxMerchant('');
+                          if (wallet.length > 0) setTxCardInstanceId(wallet[0].docId);
+                          setIsLoggingTx(true);
+                        }}
+                        className="bg-brand-accent text-brand-dark text-xs font-bold px-3 py-2 rounded-xl flex items-center gap-1 shadow"
+                      >
+                        <i data-lucide="plus" className="w-3.5 h-3.5"></i> Log Spend
+                      </button>
+                    </div>
+
+                    <div className="space-y-2.5">
+                      {transactions.length === 0 ? (
+                        <div className="bg-brand-card/40 border border-dashed border-slate-800 rounded-xl p-8 text-center">
+                          <p className="text-xs text-slate-400">No logged items inside your database feed yet.</p>
+                        </div>
+                      ) : (
+                        transactions.map(tx => {
+                          const card = wallet.find(c => c.docId === tx.cardInstanceId);
+                          return (
+                            <div key={tx.docId} className="bg-brand-card/50 border border-slate-800/80 rounded-xl p-3 flex justify-between items-center">
+                              <div className="flex items-center gap-3">
+                                <span className="p-2 bg-slate-800 rounded-lg text-slate-300">
+                                  <i data-lucide="receipt" className="w-4 h-4"></i>
+                                </span>
+                                <div>
+                                  <h4 className="text-xs font-bold text-white">{tx.merchant}</h4>
+                                  <p className="text-[10px] text-slate-500">
+                                    {tx.category} &bull; {tx.date} &bull; {card ? card.name : 'Unknown Card'}
+                                  </p>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-3">
+                                <div className="text-right">
+                                  <span className="text-xs font-extrabold text-white">
+                                    {tx.currency} {tx.amount.toFixed(2)}
+                                  </span>
+                                  {tx.currency !== 'SGD' && (
+                                    <p className="text-[9px] text-slate-400">~S$ {tx.amountSGD.toFixed(2)}</p>
+                                  )}
+                                </div>
+                                <div className="flex gap-1.5">
+                                  <button onClick={() => handleEditTx(tx)} className="text-slate-400 hover:text-white p-1">
+                                    <i data-lucide="edit" className="w-3.5 h-3.5"></i>
+                                  </button>
+                                  <button onClick={() => handleDeleteTx(tx.docId)} className="text-slate-400 hover:text-brand-red p-1">
+                                    <i data-lucide="trash-2" className="w-3.5 h-3.5"></i>
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })
+                      )}
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+          </main>
+
+          {/* ADD CARD CONFIGURATION OVERLAY MODAL */}
+          {isAddingCard && (
+            <div className="fixed inset-0 z-50 bg-brand-dark/90 backdrop-blur-sm flex items-end justify-center p-4">
+              <div className="bg-brand-card border border-slate-800 rounded-3xl w-full max-w-sm p-5 space-y-4 shadow-2xl animate-slideUp">
+                <div className="flex justify-between items-center">
+                  <h3 className="text-sm font-black text-white">
+                    {editingCardInstanceId ? 'Configure Card Preferences' : 'Choose Base Template'}
+                  </h3>
+                  <button onClick={closeConfigModal} className="text-slate-400 hover:text-white">
+                    <i data-lucide="x" className="w-5 h-5"></i>
+                  </button>
+                </div>
+
+                {!configCardTemplate ? (
+                  <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
+                    {PRESET_CARDS.map(preset => (
+                      <button 
+                        key={preset.id}
+                        onClick={() => {
+                          setConfigCardTemplate(preset);
+                          setConfigCategories(preset.defaultSelectedCategories || []);
+                        }}
+                        className="w-full bg-slate-900 border border-slate-800 p-3 rounded-xl text-left hover:border-brand-accent transition flex justify-between items-center"
+                      >
+                        <div>
+                          <p className="text-xs font-bold text-white">{preset.name}</p>
+                          <p className="text-[10px] text-slate-400">{preset.issuer}</p>
+                        </div>
+                        <span className="text-[10px] text-brand-accent font-extrabold">{preset.type}</span>
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    <div>
+                      <p className="text-xs text-slate-400">Card Template Selection</p>
+                      <h4 className="text-sm font-bold text-white mt-0.5">{configCardTemplate.name}</h4>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="text-[10px] text-slate-400 block mb-1">Billing Cycle Start Date</label>
+                        <input 
+                          type="number" 
+                          min="1" 
+                          max="28"
+                          value={configBillingCycle}
+                          onChange={(e) => setConfigBillingCycle(e.target.value)}
+                          className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white" 
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[10px] text-slate-400 block mb-1">Target Statement Spend Limit</label>
+                        <input 
+                          type="number"
+                          placeholder={configCardTemplate.globalCap}
+                          value={configCustomCap}
+                          onChange={(e) => setConfigCustomCap(e.target.value)}
+                          className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white" 
+                        />
+                      </div>
+                    </div>
+
+                    {configCardTemplate.requiresSelection && (
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] text-slate-400 block">Select Active Whitelist Categories ({configCardTemplate.maxSelectable} Max)</label>
+                        <div className="grid grid-cols-2 gap-2">
+                          {configCardTemplate.categories.map(cat => {
+                            const active = configCategories.includes(cat);
+                            return (
+                              <button
+                                key={cat}
+                                type="button"
+                                onClick={() => {
+                                  if (active) {
+                                    setConfigCategories(configCategories.filter(c => c !== cat));
+                                  } else {
+                                    if (configCategories.length >= configCardTemplate.maxSelectable) return;
+                                    setConfigCategories([...configCategories, cat]);
+                                  }
+                                }}
+                                className={`text-[10px] py-1.5 px-2.5 rounded-lg border text-left transition ${
+                                  active 
+                                    ? 'bg-brand-accent/20 border-brand-accent text-white' 
+                                    : 'bg-slate-950 border-slate-850 text-slate-400'
+                                }`}
+                              >
+                                {cat}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="pt-2">
+                      <button 
+                        onClick={handleSaveCardSetup}
+                        className="w-full bg-brand-accent text-brand-dark py-2.5 rounded-xl font-bold text-xs"
+                      >
+                        Add to Wallet Setup
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* LEDGER WRITE TRANSACTION MODAL */}
+          {isLoggingTx && (
+            <div className="fixed inset-0 z-50 bg-brand-dark/90 backdrop-blur-sm flex items-end justify-center p-4">
+              <form onSubmit={handleSaveTransaction} className="bg-brand-card border border-slate-800 rounded-3xl w-full max-w-sm p-5 space-y-4 shadow-2xl animate-slideUp">
+                <div className="flex justify-between items-center">
+                  <h3 className="text-sm font-black text-white">
+                    {txEditingId ? 'Amend Payment Slip' : 'Log Transaction Receipt'}
+                  </h3>
+                  <button type="button" onClick={closeTxForm} className="text-slate-400 hover:text-white">
+                    <i data-lucide="x" className="w-5 h-5"></i>
+                  </button>
+                </div>
+
+                <div className="space-y-3">
+                  <div>
+                    <label className="text-[10px] text-slate-400 block mb-1">Select Active Card Instrument</label>
+                    <select 
+                      value={txCardInstanceId} 
+                      required
+                      onChange={(e) => setTxCardInstanceId(e.target.value)}
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white"
+                    >
+                      <option value="">-- Choose Card --</option>
+                      {wallet.map(c => (
+                        <option key={c.docId} value={c.docId}>{c.name}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-[10px] text-slate-400 block mb-1">Merchant Description</label>
+                      <input 
+                        type="text" 
+                        required
+                        placeholder="Grab, Sheng Siong, etc." 
+                        value={txMerchant}
+                        onChange={(e) => setTxMerchant(e.target.value)}
+                        className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white" 
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] text-slate-400 block mb-1">Spending Category</label>
+                      <select 
+                        value={txCategory} 
+                        onChange={(e) => setTxCategory(e.target.value)}
+                        className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white"
+                      >
+                        {TRANSACTION_CATEGORIES.map(cat => (
+                          <option key={cat} value={cat}>{cat}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-[10px] text-slate-400 block mb-1">Currency</label>
+                      <select 
+                        value={txCurrency} 
+                        onChange={(e) => setTxCurrency(e.target.value)}
+                        className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white"
+                      >
+                        <option value="SGD">SGD</option>
+                        <option value="MYR">MYR</option>
+                        <option value="USD">USD</option>
+                        <option value="JPY">JPY</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="text-[10px] text-slate-400 block mb-1">Receipt Price</label>
+                      <input 
+                        type="number" 
+                        step="0.01"
+                        required
+                        value={txAmount}
+                        onChange={(e) => setTxAmount(e.target.value)}
+                        className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white" 
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="text-[10px] text-slate-400 block mb-1">Spend Date</label>
+                    <input 
+                      type="date" 
+                      required
+                      value={txDate}
+                      onChange={(e) => setTxDate(e.target.value)}
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white" 
+                    />
+                  </div>
+                </div>
+
+                <div className="pt-2">
+                  <button 
+                    type="submit"
+                    className="w-full bg-brand-accent text-brand-dark py-2.5 rounded-xl font-bold text-xs"
+                  >
+                    Save Entry
+                  </button>
+                </div>
+              </form>
+            </div>
+          )}
+
+          {/* FIXED NOTIFICATION TOAST POPUP */}
+          {feedbackMsg && (
+            <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-50 bg-slate-900 border border-slate-800 px-4 py-2.5 rounded-xl shadow-lg flex items-center gap-2 max-w-[90%]">
+              <span className="w-1.5 h-1.5 rounded-full bg-brand-accent"></span>
+              <span className="text-[11px] text-slate-200 font-medium whitespace-nowrap">{feedbackMsg}</span>
+            </div>
+          )}
+
+          {/* MOBILE PHONE SAFE BOTTOM NAVIGATION BAR */}
+          <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md bg-brand-dark/90 backdrop-blur-md border-t border-slate-850 z-40 px-3 py-2 flex justify-around">
+            <button 
+              onClick={() => setActiveTab('home')}
+              className={`flex flex-col items-center gap-1 py-1 px-3 rounded-lg transition-all ${
+                activeTab === 'home' ? 'text-brand-accent' : 'text-slate-500 hover:text-slate-300'
+              }`}
+            >
+              <i data-lucide="zap" className="w-5 h-5"></i>
+              <span className="text-[9px] font-bold">Optimizer</span>
+            </button>
+            <button 
+              onClick={() => setActiveTab('wallet')}
+              className={`flex flex-col items-center gap-1 py-1 px-3 rounded-lg transition-all ${
+                activeTab === 'wallet' ? 'text-brand-accent' : 'text-slate-500 hover:text-slate-300'
+              }`}
+            >
+              <i data-lucide="wallet" className="w-5 h-5"></i>
+              <span className="text-[9px] font-bold">My Cards</span>
+            </button>
+            <button 
+              onClick={() => setActiveTab('analysis')}
+              className={`flex flex-col items-center gap-1 py-1 px-3 rounded-lg transition-all ${
+                activeTab === 'analysis' ? 'text-brand-accent' : 'text-slate-500 hover:text-slate-300'
+              }`}
+            >
+              <i data-lucide="line-chart" className="w-5 h-5"></i>
+              <span className="text-[9px] font-bold">Analysis</span>
+            </button>
+            <button 
+              onClick={() => setActiveTab('logs')}
+              className={`flex flex-col items-center gap-1 py-1 px-3 rounded-lg transition-all ${
+                activeTab === 'logs' ? 'text-brand-accent' : 'text-slate-500 hover:text-slate-300'
+              }`}
+            >
+              <i data-lucide="receipt" className="w-5 h-5"></i>
+              <span className="text-[9px] font-bold">Log Slip</span>
+            </button>
+          </nav>
+
+        </div>
+      );
+    }
+
+    window.onload = function() {
+      const root = ReactDOM.createRoot(document.getElementById('root'));
+      root.render(<App />);
+
+      setTimeout(() => {
+        lucide.createIcons();
+      }, 500);
+
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('./sw.js')
+          .then((reg) => console.log('Service Worker Active:', reg.scope))
+          .catch((err) => console.warn('Service Worker registration skipped:', err));
+      }
+    }
+  </script>
+</body>
+</html>
