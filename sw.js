@@ -43,14 +43,21 @@
     }
     /* Safe Area Spacing for iOS Home Indicator */
     .pb-safe {
-      padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 4.5rem);
+      padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 5.5rem);
+    }
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 4px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background-color: #334155;
+      border-radius: 4px;
     }
   </style>
 
   <!-- React Dependencies -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js" crossorigin></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js" crossorigin></script>
-  <script src="https://cdnjs.ajax.com/ajax/libs/babel-standalone/7.24.7/babel.min.js" crossorigin></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.24.7/babel.min.js" crossorigin></script>
 
   <!-- Firebase Legacy Compat SDKs (Stable Web Iframe Imports) -->
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
@@ -68,7 +75,7 @@
   <script type="text/babel">
     const { useState, useEffect, useMemo, useRef } = React;
 
-    // --- 1. FIREBASE CONFIGURATION (VERIFIED API KEY) ---
+    // --- 1. FIREBASE CONFIGURATION (VERIFIED PRODUCTION VALUES) ---
     const firebaseConfig = {
       apiKey: "AIzaSyC9Pq0TwtuRJbNEMAg7wt72fIPuqIJejLs",
       authDomain: "swipewise-9a6cf.firebaseapp.com",
@@ -95,7 +102,7 @@
       }
     }
 
-    // --- 2. 2026 SINGAPORE CARD REFERENCE DATABASE ---
+    // --- 2. 2026 SINGAPORE CARD REFERENCE DATABASE (FINETUNED & UPDATED) ---
     const PRESET_CARDS = [
       {
         id: 'maybank-ff',
@@ -105,12 +112,14 @@
         baseRate: 0.3,
         bonusRate: 8.0,
         minSpend: 800,
-        globalCap: 125, // Absolute cash cap of S$125 with S$800 min spend, S$375 cap on each category
+        globalCap: 125, // Overall cashback cap of S$125 with S$800 min spend, S$25 cap on each category
+        categoryCap: 312.50, // S$312.50 spend per category hits the S$25 sub-cap
         categories: ['Groceries', 'Dining', 'Transport/SimplyGo', 'Online Shopping', 'Travel'],
         requiresSelection: true,
         maxSelectable: 5,
         defaultSelectedCategories: ['Groceries', 'Dining', 'Transport/SimplyGo'],
-        desc: '8% Cashback on 5 selected categories up to S$125 overall rebate cap.'
+        desc: '8% Cashback on 5 selected categories up to S$125 overall rebate cap.',
+        briefGuide: 'Spend at least S$800 monthly. Cashback is capped at S$25 per category (up to S$312.50 spend per category). If spend is S$500 to S$799, earn 5% instead. Below S$500 earns 0.3% base rate.'
       },
       {
         id: 'uob-one',
@@ -119,11 +128,12 @@
         type: 'Cashback',
         baseRate: 3.33,
         bonusRate: 10.0, // Up to 10% on partner merchants (Grab, Shopee, SimplyGo, SP Group)
-        minSpend: 600, // Tiers: S$600, S$1000, S$2000
-        globalCap: 100, // Quarterly cash reward cap
+        minSpend: 500, // Tiers: S$500, S$1000, S$2000
+        globalCap: 100, // Quarterly cash rebate cap
         categories: ['Groceries', 'Dining', 'Transport/SimplyGo', 'Utilities', 'Online Shopping'],
         requiresSelection: false,
-        desc: 'Up to 10% on partners with S$500/S$1,000/S$2,000 monthly spend tiers.'
+        desc: 'Up to 10% on partners with S$500/S$1,000/S$2,000 monthly spend tiers.',
+        briefGuide: 'Requires a minimum of 10 transactions per month. You must hit your spending tier (S$500, S$1,000, or S$2,000) for all 3 consecutive months in a quarter. Groceries earn up to 8%, SP utilities earn up to 4.33%.'
       },
       {
         id: 'hsbc-liveplus',
@@ -133,10 +143,11 @@
         baseRate: 0.3,
         bonusRate: 8.0,
         minSpend: 600,
-        globalCap: 250, // S$250 per quarter cap
+        globalCap: 83.33, // S$250 quarterly cap split monthly (~S$83)
         categories: ['Dining', 'Shopping', 'Entertainment'],
         requiresSelection: false,
-        desc: '8% cashback on Dining, Shopping & Entertainment globally.'
+        desc: '8% cashback on Dining, Shopping & Entertainment globally.',
+        briefGuide: 'Earn 8% cashback globally on Dining, Shopping, and Entertainment by spending at least S$600 within the calendar month. Total cashback capped at S$250 per calendar quarter.'
       },
       {
         id: 'hsbc-revolution',
@@ -147,22 +158,10 @@
         bonusRate: 4.0, // 4 mpd on online/contactless
         minSpend: 0,
         globalCap: 1000, // Caps out on S$1,000 spend
-        categories: ['Online Shopping', 'Travel', 'Dining', 'Groceries'],
+        categories: ['Online Shopping', 'Travel', 'Dining', 'Transport/SimplyGo'],
         requiresSelection: false,
-        desc: '4 mpd (9x Bonus Points) on contactless and online transactions up to S$1,000 monthly.'
-      },
-      {
-        id: 'dcs-flexi',
-        name: 'DCS Flexi Card',
-        issuer: 'DCS',
-        type: 'Cashback',
-        baseRate: 0.5,
-        bonusRate: 8.0,
-        minSpend: 500,
-        globalCap: 50,
-        categories: ['Foreign Currency', 'Dining', 'Shopping'],
-        requiresSelection: false,
-        desc: '8% cash rebate on foreign currency transactions up to a sub-cap.'
+        desc: '4 mpd (10x Reward Points) on contactless and online transactions up to S$1,000 monthly.',
+        briefGuide: 'Visa Signature card with S$0 permanent annual fee. Earns 4 Miles Per Dollar (4 MPD) on contactless and direct online payments (excluding Online Travel Agencies like Agoda, book airlines directly). Monthly bonus spend cap of S$1,000.'
       },
       {
         id: 'uob-ladys-solitaire',
@@ -177,7 +176,22 @@
         requiresSelection: true,
         maxSelectable: 2,
         defaultSelectedCategories: ['Dining', 'Travel'],
-        desc: '4 mpd (10 UNI$) on up to 2 selected categories. High S$2,000 cap.'
+        desc: '4 mpd (10 UNI$) on up to 2 selected categories. High S$2,000 cap.',
+        briefGuide: 'Choose up to 2 preferred categories (e.g. Dining, Travel) to earn 4 Miles Per Dollar (10 UNI$ per S$5 spend). Bonus points cap out at S$2,000 spend per calendar month. No minimum spend requirement.'
+      },
+      {
+        id: 'dcs-flexi',
+        name: 'DCS Flexi Card',
+        issuer: 'DCS',
+        type: 'Cashback',
+        baseRate: 0.5,
+        bonusRate: 8.0,
+        minSpend: 500,
+        globalCap: 50,
+        categories: ['Foreign Currency', 'Dining', 'Shopping'],
+        requiresSelection: false,
+        desc: '8% cash rebate on foreign currency transactions up to a sub-cap.',
+        briefGuide: 'Earn 8% cash rebate on overseas and foreign currency transactions with minimum S$500 monthly spend. Cumulative cash rewards capped at S$50 per statement month.'
       }
     ];
 
@@ -204,7 +218,6 @@
       const [calcAmount, setCalcAmount] = useState('');
       const [calcCurrency, setCalcCurrency] = useState('SGD');
       const [calcIsOnline, setCalcIsOnline] = useState(false);
-      const [calcResult, setCalcResult] = useState(null);
 
       // Add Card modal & Configuration UI
       const [isAddingCard, setIsAddingCard] = useState(false);
@@ -223,6 +236,14 @@
       const [txMerchant, setTxMerchant] = useState('');
       const [txDate, setTxDate] = useState(new Date().toISOString().split('T')[0]);
       const [txEditingId, setTxEditingId] = useState(null);
+
+      // Custom Confirmation Overlay Modal State (No-Alert / No-Confirm Rule)
+      const [confirmModal, setConfirmModal] = useState({
+        isOpen: false,
+        title: '',
+        message: '',
+        onConfirm: null
+      });
 
       // Global Notification/Modal System
       const [feedbackMsg, setFeedbackMsg] = useState(null);
@@ -328,6 +349,19 @@
         return value * (rates[currency] || 1.0);
       };
 
+      // Custom safe confirmation helper replacing standard window.confirm()
+      const triggerConfirm = (title, message, onConfirmAction) => {
+        setConfirmModal({
+          isOpen: true,
+          title,
+          message,
+          onConfirm: () => {
+            onConfirmAction();
+            setConfirmModal(prev => ({ ...prev, isOpen: false }));
+          }
+        });
+      };
+
       // Add/Update User Cards to Wallet Config
       const handleSaveCardSetup = async () => {
         if (!configCardTemplate) return;
@@ -383,22 +417,36 @@
         setConfigCustomCap('');
       };
 
-      const handleRemoveCard = async (docId) => {
-        if (!window.confirm("Are you sure you want to remove this card from your wallet?")) return;
-        if (!isFirebaseConfigured) {
-          const updated = wallet.filter(c => c.docId !== docId);
-          setWallet(updated);
-          localStorage.setItem(`swipewise_wallet_${user.uid}`, JSON.stringify(updated));
-          showToast("Card removed locally.");
-          return;
-        }
-        await db.collection('users').doc(user.uid).collection('wallet').doc(docId).delete();
-        showToast("Card removed from cloud.");
+      // FIXED REMOVE CARD: No-Confirm/No-Alert Rule implementation
+      const handleRemoveCard = (docId) => {
+        triggerConfirm(
+          "Remove Credit Card", 
+          "Are you sure you want to remove this card from your active portfolio?", 
+          async () => {
+            if (!isFirebaseConfigured) {
+              const updated = wallet.filter(c => c.docId !== docId);
+              setWallet(updated);
+              localStorage.setItem(`swipewise_wallet_${user.uid}`, JSON.stringify(updated));
+              showToast("Card removed locally.");
+              return;
+            }
+            try {
+              await db.collection('users').doc(user.uid).collection('wallet').doc(docId).delete();
+              showToast("Card removed from cloud.");
+            } catch (err) {
+              showToast("Error removing card: " + err.message);
+            }
+          }
+        );
       };
 
-      // Transaction CRUD actions
+      // Transaction CRUD actions with FIXED transaction edit logic
       const handleSaveTransaction = async (e) => {
         e.preventDefault();
+        if (!txCardInstanceId) {
+          showToast("Please choose a card to log this spending against!");
+          return;
+        }
         const amtSGD = convertToSGD(txAmount, txCurrency);
         const payload = {
           cardInstanceId: txCardInstanceId,
@@ -415,7 +463,9 @@
           const updated = [...transactions];
           if (txEditingId) {
             const idx = updated.findIndex(t => t.docId === txEditingId);
-            updated[idx] = { ...updated[idx], ...payload };
+            if (idx > -1) {
+              updated[idx] = { ...updated[idx], ...payload };
+            }
           } else {
             updated.push({ docId: Date.now().toString(), ...payload });
           }
@@ -428,14 +478,15 @@
 
         try {
           if (txEditingId) {
-            await db.collection('users').doc(user.uid).collection('transactions').doc(txEditingId).update(payload);
+            await db.collection('users').doc(user.uid).collection('transactions').doc(txEditingId).set(payload, { merge: true });
+            showToast("Log slip updated!");
           } else {
             await db.collection('users').doc(user.uid).collection('transactions').add(payload);
+            showToast("Transaction synced with Cloud Ledger!");
           }
           closeTxForm();
-          showToast("Transaction synced with Cloud Ledger!");
         } catch (err) {
-          showToast("Network Error logging transaction: " + err.message);
+          showToast("Network Error saving transaction: " + err.message);
         }
       };
 
@@ -458,17 +509,27 @@
         setIsLoggingTx(true);
       };
 
-      const handleDeleteTx = async (docId) => {
-        if (!window.confirm("Delete this spending entry?")) return;
-        if (!isFirebaseConfigured) {
-          const updated = transactions.filter(t => t.docId !== docId);
-          setTransactions(updated);
-          localStorage.setItem(`swipewise_txs_${user.uid}`, JSON.stringify(updated));
-          showToast("Entry removed locally.");
-          return;
-        }
-        await db.collection('users').doc(user.uid).collection('transactions').doc(docId).delete();
-        showToast("Entry removed.");
+      // FIXED DELETE TRANSACTION: No-Confirm/No-Alert rule implementation
+      const handleDeleteTx = (docId) => {
+        triggerConfirm(
+          "Delete Spent Entry",
+          "Are you sure you want to permanently delete this logged expenditure?",
+          async () => {
+            if (!isFirebaseConfigured) {
+              const updated = transactions.filter(t => t.docId !== docId);
+              setTransactions(updated);
+              localStorage.setItem(`swipewise_txs_${user.uid}`, JSON.stringify(updated));
+              showToast("Entry removed locally.");
+              return;
+            }
+            try {
+              await db.collection('users').doc(user.uid).collection('transactions').doc(docId).delete();
+              showToast("Entry deleted successfully.");
+            } catch (err) {
+              showToast("Error deleting transaction: " + err.message);
+            }
+          }
+        );
       };
 
       // Custom Billing/Statement Period Filter logic
@@ -494,7 +555,7 @@
         });
       };
 
-      // --- 4. PRECISION YIELD ENGINE CORE LOGIC ---
+      // --- 4. PRECISION YIELD ENGINE CORE LOGIC (WATERFALL ENGINE OVERHAUL) ---
       const sortedYieldRecommendations = useMemo(() => {
         if (wallet.length === 0) return [];
         const targetAmt = parseFloat(calcAmount) || 0;
@@ -505,83 +566,137 @@
           const currentTotalSpend = cardTxs.reduce((sum, t) => sum + t.amountSGD, 0);
           
           let rate = card.baseRate;
-          let notes = `Default Base Rate of ${card.baseRate}% applied.`;
+          let notes = `Default Base Rate of ${card.baseRate}% applies.`;
           let rateType = card.type;
           
           const isTargetCategoryActive = card.selectedCategories && card.selectedCategories.includes(calcCategory);
 
+          // --- WATERFALL FLOWS BY CARD ID ---
           if (card.templateId === 'maybank-ff') {
+            // Category-specific spending
             const catTxs = cardTxs.filter(t => t.category === calcCategory);
             const catSpend = catTxs.reduce((sum, t) => sum + t.amountSGD, 0);
             
             if (isTargetCategoryActive) {
-              if (currentTotalSpend < 800) {
+              // Rule 1: S$800 minimum spend triggers the 8% bonus rate
+              const prospectiveSpend = currentTotalSpend + targetAmtSGD;
+              
+              if (prospectiveSpend < 800) {
                 rate = 0.3;
-                notes = `Maybank minimum spend is S$800. Currently S$${currentTotalSpend.toFixed(0)} spent. Base 0.3% rate applies.`;
-              } else if (catSpend >= 375) {
+                notes = `Prospective spend S$${prospectiveSpend.toFixed(0)} is below the S$800 threshold for 8% cashback. Base 0.3% applies.`;
+              } else if (catSpend >= 312.50) {
+                // S$312.50 spend * 8% = S$25 sub-cap hit
                 rate = 0.3;
-                notes = `S$375 cap reached for ${calcCategory}. Base 0.3% rate applies.`;
+                notes = `S$25 category cashback cap reached for ${calcCategory} (already spent S$${catSpend.toFixed(0)}). Base rate applies.`;
               } else {
-                rate = 8.0;
-                const rem = 375 - catSpend;
-                notes = `Yield: 8% Cashback. S$${rem.toFixed(0)} cap headroom remaining for ${calcCategory}.`;
+                // S$800 spent OR target will trigger S$800 tier
+                // Weighted split calculation if targetAmtSGD spills over S$312.50 category limit
+                const remainingHeadroom = Math.max(0, 312.50 - catSpend);
+                
+                if (targetAmtSGD <= remainingHeadroom) {
+                  rate = 8.0;
+                  notes = `Earns 8% cashback. You have S$${remainingHeadroom.toFixed(0)} remaining category headroom.`;
+                } else {
+                  // Weighted rate calculation
+                  const bonusPortion = remainingHeadroom;
+                  const basePortion = Math.max(0, targetAmtSGD - remainingHeadroom);
+                  const averageRate = ((bonusPortion * 8.0) + (basePortion * 0.3)) / targetAmtSGD;
+                  rate = parseFloat(averageRate.toFixed(2));
+                  notes = `CAPPED WATERFALL: S$${bonusPortion.toFixed(0)} earns 8%, spillover S$${basePortion.toFixed(0)} earns 0.3%. Average yield: ${rate}%.`;
+                }
               }
             }
           } 
           else if (card.templateId === 'uob-one') {
             const isPartner = ['Groceries', 'Transport/SimplyGo', 'Online Shopping'].includes(calcCategory);
-            
-            if (currentTotalSpend < 500) {
+            const totalMonthlySpendWithTx = currentTotalSpend + targetAmtSGD;
+
+            if (totalMonthlySpendWithTx < 500) {
               rate = 3.33;
               notes = `Pending UOB One S$500 spend gate. Currently at S$${currentTotalSpend.toFixed(0)}. Base rate 3.33% applies.`;
             } else {
+              // Partner category gets 10% up to statement cap, others get 5% or 3.33%
               rate = isPartner ? 10.0 : 5.0;
-              notes = `Meets UOB spend gate. Multiplier active: ${rate}% cashback on ${calcCategory}.`;
+              notes = `Meets UOB spend gate. Multiplier active: ${rate}% cashback on ${calcCategory}. (Ensures ≥ 10 transactions monthly!)`;
             }
           }
           else if (card.templateId === 'hsbc-liveplus') {
-            if (currentTotalSpend < 600) {
+            const prospectiveTotal = currentTotalSpend + targetAmtSGD;
+            if (prospectiveTotal < 600) {
               rate = 0.3;
-              notes = `HSBC Live+ requires S$600 min. Currently S$${currentTotalSpend.toFixed(0)}. Base rate applies.`;
+              notes = `HSBC Live+ requires S$600 min monthly spend. Currently S$${currentTotalSpend.toFixed(0)} logged. Base 0.3% applies.`;
             } else if (['Dining', 'Groceries'].includes(calcCategory)) {
-              rate = 8.0;
-              notes = `HSBC Live+ 8.0% cashback tier unlocked. Current spend S$${currentTotalSpend.toFixed(0)}.`;
+              // Split logic for S$250 quarterly cap (~S$83 per month average)
+              const maxMonthlyCapSpend = 1000; // S$1000 spend monthly maximum to remain in 8% rebate
+              if (currentTotalSpend >= maxMonthlyCapSpend) {
+                rate = 0.3;
+                notes = `S$1,000 monthly bonus threshold met. Spillover earns base rate 0.3%.`;
+              } else {
+                const remainingLimit = Math.max(0, maxMonthlyCapSpend - currentTotalSpend);
+                if (targetAmtSGD <= remainingLimit) {
+                  rate = 8.0;
+                  notes = `Unlocks 8% cashback. Headroom remaining: S$${remainingLimit.toFixed(0)}.`;
+                } else {
+                  const bonusPart = remainingLimit;
+                  const basePart = targetAmtSGD - remainingLimit;
+                  const avgRate = ((bonusPart * 8.0) + (basePart * 0.3)) / targetAmtSGD;
+                  rate = parseFloat(avgRate.toFixed(2));
+                  notes = `CAPPED WATERFALL: S$${bonusPart.toFixed(0)} earns 8%, spillover S$${basePart.toFixed(0)} earns 0.3%. Average yield: ${rate}%.`;
+                }
+              }
             }
           }
           else if (card.templateId === 'hsbc-revolution') {
-            if (['Online Shopping', 'Travel', 'Dining'].includes(calcCategory)) {
-              if (currentTotalSpend < 1000) {
-                rate = 4.0;
-                rateType = 'Miles';
-                notes = `4.0 MPD. You have S$${(1000 - currentTotalSpend).toFixed(0)} left before S$1,000 monthly bonus cap.`;
-              } else {
+            if (['Online Shopping', 'Travel', 'Dining', 'Transport/SimplyGo'].includes(calcCategory)) {
+              rateType = 'Miles';
+              if (currentTotalSpend >= 1000) {
                 rate = 0.4;
-                rateType = 'Miles';
-                notes = `HSBC Revolution S$1,000 bonus limit exceeded. Base 0.4 MPD applies.`;
+                notes = `HSBC Revolution monthly S$1,000 bonus limit reached. Fallback to base 0.4 MPD.`;
+              } else {
+                const remainingLimit = Math.max(0, 1000 - currentTotalSpend);
+                if (targetAmtSGD <= remainingLimit) {
+                  rate = 4.0;
+                  notes = `Unlocks 4.0 MPD. Cap headroom: S$${remainingLimit.toFixed(0)} remaining.`;
+                } else {
+                  const bonusPart = remainingLimit;
+                  const basePart = targetAmtSGD - remainingLimit;
+                  const avgRate = ((bonusPart * 4.0) + (basePart * 0.4)) / targetAmtSGD;
+                  rate = parseFloat(avgRate.toFixed(2));
+                  notes = `CAPPED WATERFALL: S$${bonusPart.toFixed(0)} earns 4.0 MPD, spillover S$${basePart.toFixed(0)} earns 0.4 MPD. Avg: ${rate} MPD.`;
+                }
               }
             }
           }
           else if (card.templateId === 'uob-ladys-solitaire') {
             if (isTargetCategoryActive) {
-              if (currentTotalSpend < 2000) {
-                rate = 4.0;
-                rateType = 'Miles';
-                notes = `4.0 MPD active. Multiplier headroom: S$${(2000 - currentTotalSpend).toFixed(0)} remaining.`;
-              } else {
+              rateType = 'Miles';
+              if (currentTotalSpend >= 2000) {
                 rate = 0.4;
-                rateType = 'Miles';
-                notes = `Lady's S$2,000 bonus limit met. Downgraded to base 0.4 MPD.`;
+                notes = `Lady's S$2,000 monthly bonus spend limit met. Base 0.4 MPD applies.`;
+              } else {
+                const remainingLimit = Math.max(0, 2000 - currentTotalSpend);
+                if (targetAmtSGD <= remainingLimit) {
+                  rate = 4.0;
+                  notes = `Unlocks 4.0 MPD. Cap headroom: S$${remainingLimit.toFixed(0)} remaining.`;
+                } else {
+                  const bonusPart = remainingLimit;
+                  const basePart = targetAmtSGD - remainingLimit;
+                  const avgRate = ((bonusPart * 4.0) + (basePart * 0.4)) / targetAmtSGD;
+                  rate = parseFloat(avgRate.toFixed(2));
+                  notes = `CAPPED WATERFALL: S$${bonusPart.toFixed(0)} earns 4.0 MPD, spillover S$${basePart.toFixed(0)} earns 0.4 MPD. Avg: ${rate} MPD.`;
+                }
               }
             }
           }
           else if (card.templateId === 'dcs-flexi') {
             if (calcCategory === 'Foreign Currency' || calcCurrency !== 'SGD') {
-              if (currentTotalSpend < 500) {
+              const prospectiveTotal = currentTotalSpend + targetAmtSGD;
+              if (prospectiveTotal < 500) {
                 rate = 0.5;
-                notes = `Requires S$500 min spend. S$${currentTotalSpend.toFixed(0)} processed. Base rate active.`;
+                notes = `DCS requires S$500 min spend. S$${currentTotalSpend.toFixed(0)} processed. Base 0.5% rate active.`;
               } else {
                 rate = 8.0;
-                notes = `8.0% foreign transaction rewards active.`;
+                notes = `Unlocks 8% foreign transaction cashback rebate.`;
               }
             }
           }
@@ -605,13 +720,13 @@
         setTxMerchant(`Optimized ${calcCategory} Swipe`);
         setTxDate(new Date().toISOString().split('T')[0]);
         setIsLoggingTx(true);
-        showToast("Form ready to save optimization!");
+        showToast("Logged directly from optimizer recommendations!");
       };
 
       return (
         <div className="max-w-md mx-auto bg-brand-dark min-h-screen shadow-2xl relative flex flex-col">
           
-          {/* TOP HEADER */}
+          {}
           <header className="sticky top-0 z-40 bg-brand-dark/80 backdrop-blur-md border-b border-slate-800/80 px-4 py-3 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <span className="p-1.5 bg-brand-accent/20 rounded-lg text-brand-accent">
@@ -626,7 +741,6 @@
               </div>
             </div>
 
-            {/* CONNECTION INDICATOR */}
             <div className="flex items-center gap-2">
               <div className="flex items-center gap-1.5">
                 <span className={`w-2 h-2 rounded-full ${networkOnline ? 'bg-brand-accent' : 'bg-brand-red'} animate-pulse`}></span>
@@ -641,7 +755,7 @@
           </header>
 
           {/* MAIN PAGE VIEW SCROLLER */}
-          <main className="flex-1 overflow-y-auto px-4 pt-4 pb-safe">
+          <main className="flex-1 overflow-y-auto px-4 pt-4 pb-safe custom-scrollbar">
             
             {!user ? (
               <div className="flex flex-col items-center justify-center py-16 px-4 text-center">
@@ -775,7 +889,7 @@
                               </div>
                               <div className="text-right">
                                 <span className={`text-sm font-black ${rec.calculatedType === 'Miles' ? 'text-brand-gold' : 'text-brand-accent'}`}>
-                                  {rec.calculatedRate}% {rec.calculatedType}
+                                  {rec.calculatedRate} {rec.calculatedType === 'Miles' ? 'MPD' : '% Cashback'}
                                 </span>
                               </div>
                             </div>
@@ -785,13 +899,13 @@
                             </p>
 
                             <div className="mt-3 flex justify-between items-center pt-2 border-t border-slate-800/60">
-                              <span className="text-[10px] text-slate-500">Includes active cycle tracks</span>
+                              <span className="text-[10px] text-slate-500">Includes cycle cap check</span>
                               <button 
                                 onClick={() => handleFastLog(rec)}
                                 className="flex items-center gap-1 bg-brand-accent text-brand-dark text-[10px] font-extrabold px-3 py-1.5 rounded-lg hover:scale-105 transition duration-150"
                               >
-                                <i data-lucide="zap-fast" className="w-3 h-3"></i>
-                                Log This Payment
+                                <i data-lucide="receipt" className="w-3 h-3"></i>
+                                Log Spend Slip
                               </button>
                             </div>
                           </div>
@@ -877,12 +991,12 @@
                   </div>
                 )}
 
-                {/* TAB 3: SMART PROGRESS METRICS */}
+                {/* TAB 3: SMART PROGRESS METRICS & TERMS */}
                 {activeTab === 'analysis' && (
                   <div className="space-y-5 animate-fadeIn">
                     <div>
-                      <h2 className="text-md font-bold text-white">Spend Gate Analysis</h2>
-                      <p className="text-xs text-slate-400">Statement cycle progress tracking metrics.</p>
+                      <h2 className="text-md font-bold text-white">Spend Gate Analysis & Card Briefs</h2>
+                      <p className="text-xs text-slate-400">Statement cycle progress tracking and eligibility guidelines.</p>
                     </div>
 
                     {wallet.length === 0 ? (
@@ -893,10 +1007,11 @@
                       wallet.map(card => {
                         const cardTxs = getTransactionsForCardCycle(card, transactions);
                         const totalSpend = cardTxs.reduce((sum, t) => sum + t.amountSGD, 0);
+                        const preset = PRESET_CARDS.find(p => p.id === card.templateId);
 
                         return (
                           <div key={card.docId} className="bg-brand-card/60 border border-slate-800 rounded-2xl p-4 space-y-4 shadow-sm">
-                            <div className="flex justify-between items-center">
+                            <div className="flex justify-between items-start">
                               <div>
                                 <h3 className="text-xs font-bold text-white">{card.name}</h3>
                                 <p className="text-[9px] text-slate-500">Custom Statement Period Spending</p>
@@ -906,6 +1021,7 @@
                               </span>
                             </div>
 
+                            {/* AUTOMATED COMPLIANCE WATERFALL PROGRESS INDICATORS */}
                             {card.templateId === 'maybank-ff' && (
                               <div className="space-y-3">
                                 <div className="space-y-1">
@@ -927,12 +1043,12 @@
                                     <div key={cat} className="space-y-1">
                                       <div className="flex justify-between text-[9px] text-slate-500">
                                         <span>Category: {cat}</span>
-                                        <span>S${catSpend.toFixed(0)} / S$375</span>
+                                        <span>S${catSpend.toFixed(0)} / S$312.50</span>
                                       </div>
                                       <div className="w-full bg-slate-900 h-1.5 rounded-full overflow-hidden">
                                         <div 
                                           className="h-full bg-brand-accent/80"
-                                          style={{ width: `${Math.min((catSpend/375)*100, 100)}%` }}
+                                          style={{ width: `${Math.min((catSpend/312.50)*100, 100)}%` }}
                                         ></div>
                                       </div>
                                     </div>
@@ -968,6 +1084,19 @@
                                 </div>
                               </div>
                             )}
+
+                            {/* EXPLICIT BENEFITS GUIDE ACCORDION (FEEDBACK 3 IMPLEMENTED) */}
+                            {preset && (
+                              <div className="mt-3 pt-3 border-t border-slate-800/60 bg-slate-900/40 p-3 rounded-xl border border-slate-800">
+                                <h4 className="text-[11px] font-bold text-slate-300 flex items-center gap-1 mb-1.5">
+                                  <i data-lucide="help-circle" className="w-3.5 h-3.5 text-brand-accent"></i>
+                                  How to maximize benefits:
+                                </h4>
+                                <p className="text-[10px] text-slate-400 leading-relaxed">
+                                  {preset.briefGuide}
+                                </p>
+                              </div>
+                            )}
                           </div>
                         );
                       })
@@ -981,7 +1110,7 @@
                     <div className="flex items-center justify-between">
                       <div>
                         <h2 className="text-md font-bold text-white">Hustle Ledger</h2>
-                        <p className="text-xs text-slate-400">Add, edit and monitor card transactions.</p>
+                        <p className="text-xs text-slate-400">Log and modify expenditures seamlessly.</p>
                       </div>
                       <button 
                         onClick={() => {
@@ -1156,7 +1285,7 @@
             </div>
           )}
 
-          {/* LEDGER WRITE TRANSACTION MODAL */}
+          {/* LEDGER WRITE TRANSACTION MODAL WITH FIXES */}
           {isLoggingTx && (
             <div className="fixed inset-0 z-50 bg-brand-dark/90 backdrop-blur-sm flex items-end justify-center p-4">
               <form onSubmit={handleSaveTransaction} className="bg-brand-card border border-slate-800 rounded-3xl w-full max-w-sm p-5 space-y-4 shadow-2xl animate-slideUp">
@@ -1259,6 +1388,37 @@
                   </button>
                 </div>
               </form>
+            </div>
+          )}
+
+          {}
+          {confirmModal.isOpen && (
+            <div className="fixed inset-0 z-50 bg-brand-dark/95 backdrop-blur-sm flex items-center justify-center p-4">
+              <div className="bg-brand-card border border-slate-800 rounded-3xl w-full max-w-sm p-5 space-y-4 shadow-2xl text-center">
+                <div className="w-12 h-12 bg-brand-red/10 rounded-full text-brand-red flex items-center justify-center mx-auto mb-2">
+                  <i data-lucide="alert-triangle" className="w-6 h-6"></i>
+                </div>
+                <h3 className="text-md font-bold text-white">{confirmModal.title}</h3>
+                <p className="text-xs text-slate-400 leading-relaxed">
+                  {confirmModal.message}
+                </p>
+                <div className="grid grid-cols-2 gap-3 pt-2">
+                  <button 
+                    type="button" 
+                    onClick={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
+                    className="bg-slate-900 hover:bg-slate-850 text-slate-300 py-2.5 rounded-xl text-xs font-semibold"
+                  >
+                    Cancel
+                  </button>
+                  <button 
+                    type="button" 
+                    onClick={confirmModal.onConfirm}
+                    className="bg-brand-red text-white py-2.5 rounded-xl text-xs font-bold"
+                  >
+                    Confirm Delete
+                  </button>
+                </div>
+              </div>
             </div>
           )}
 
