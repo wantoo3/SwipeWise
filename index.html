@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>SwipeWise | Singapore 2026 Credit Card Yield Optimizer</title>
+  <title>SwipeWise | Singapore Credit Card Yield Optimizer</title>
   
   <!-- PWA Meta Tags -->
   <link rel="manifest" href="manifest.json">
@@ -41,7 +41,6 @@
       font-family: 'Inter', sans-serif;
       -webkit-tap-highlight-color: transparent;
     }
-    /* Safe Area Spacing for iOS Home Indicator */
     .pb-safe {
       padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 5.5rem);
     }
@@ -111,7 +110,7 @@
         bonusRate: 8.0,
         minSpend: 800,
         globalCap: 125, 
-        categoryCap: 312.50, // S$312.50 spend per category hits the S$25 sub-cap
+        categoryCap: 312.50,
         categories: ['Groceries', 'Dining', 'Transport/SimplyGo', 'Online Shopping', 'Travel'],
         requiresSelection: true,
         maxSelectable: 5,
@@ -125,13 +124,14 @@
         issuer: 'UOB',
         type: 'Cashback',
         baseRate: 0.3,
-        bonusRate: 10.0, // Up to 10% on partner merchants
-        minSpend: 500, // Tiers: S$500, S$1000, S$2000
+        bonusRate: 10.0,
+        minSpend: 500,
+        minTxCount: 5,
         globalCap: 100, 
         categories: ['Groceries', 'Dining', 'Transport/SimplyGo', 'Utilities', 'Online Shopping'],
         requiresSelection: false,
         desc: 'Up to 10% on key partner merchants with consecutive tiered monthly spend.',
-        briefGuide: 'Requires min 5 active transactions. Tiers: S$500/mth gets up to 3.33% (8% partners), S$1k/mth gets up to 3.33% (8% partners), S$2k/mth gets up to 5% (10% partners). Base rate of 0.3% applies if gates are missed.'
+        briefGuide: 'Requires min 5 active transactions. Tiers: S$500/mth gets up to 3.33% (8% partners), S$1k/mth gets up to 3.33% (8% partners), S$2k/mth gets up to 5% (10% partners). Base rate of 0.3% applies if gates or 5 transactions are missed.'
       },
       {
         id: 'hsbc-liveplus',
@@ -141,8 +141,8 @@
         baseRate: 0.3,
         bonusRate: 8.0,
         minSpend: 600,
-        globalCap: 83.33, // S$250 quarterly cap split monthly (~S$83)
-        categories: ['Dining', 'Online Shopping', 'Retail/General'], // Matches dining, shopping, entertainment
+        globalCap: 83.33,
+        categories: ['Dining', 'Online Shopping', 'Retail/General'],
         requiresSelection: false,
         desc: '8% cashback on local and overseas Dining, Shopping & Entertainment.',
         briefGuide: 'Requires S$600 minimum monthly spend. Bonus rate of 8% on designated lifestyle categories capped at S$250 per quarter. Below S$600 earns 0.3%.'
@@ -155,7 +155,7 @@
         baseRate: 0.4,
         bonusRate: 4.0, 
         minSpend: 0,
-        globalCap: 2000, // Solitaire cap S$2,000 spend
+        globalCap: 2000,
         categories: ['Dining', 'Travel', 'Online Shopping', 'Retail/General', 'Transport/SimplyGo'],
         requiresSelection: true,
         maxSelectable: 2,
@@ -171,7 +171,7 @@
         baseRate: 0.3,
         bonusRate: 8.0,
         minSpend: 600,
-        globalCap: 60, // Split into category sub-caps
+        globalCap: 60,
         categories: ['Online Shopping', 'Transport/SimplyGo', 'Dining'], 
         requiresSelection: false,
         desc: '8% Cashback on Online & Mobile Contactless spends.',
@@ -183,9 +183,9 @@
         issuer: 'Citibank',
         type: 'Cashback',
         baseRate: 0.25,
-        bonusRate: 8.0, // 8% Petrol, 6% Groceries & Dining
+        bonusRate: 8.0,
         minSpend: 800,
-        globalCap: 75, // Split as S$25 per sub-category
+        globalCap: 75,
         categories: ['Dining', 'Groceries', 'Transport/SimplyGo'],
         requiresSelection: false,
         desc: '8% Cashback on Petrol, 6% on Dining & Groceries.',
@@ -199,7 +199,7 @@
         baseRate: 0.4,
         bonusRate: 4.0,
         minSpend: 0,
-        globalCap: 1000, // Caps out on S$1,000 spend
+        globalCap: 1000,
         categories: ['Online Shopping', 'Dining', 'Travel', 'Retail/General'],
         requiresSelection: false,
         desc: '4 MPD on Online transactions and Shopping, pairs with Instarem Amaze to bypass FX fees.',
@@ -211,7 +211,7 @@
         issuer: 'OCBC',
         type: 'Cashback',
         baseRate: 0.3,
-        bonusRate: 5.0, // 5% Dining, 3% Groceries, Utilities, Travel, Transport
+        bonusRate: 5.0,
         minSpend: 800,
         globalCap: 80,
         categories: ['Dining', 'Groceries', 'Transport/SimplyGo', 'Utilities', 'Travel'],
@@ -241,7 +241,7 @@
         baseRate: 1.6,
         bonusRate: 1.6,
         minSpend: 0,
-        globalCap: 99999, // Unlimited
+        globalCap: 99999,
         categories: ['Dining', 'Groceries', 'Online Shopping', 'Transport/SimplyGo', 'Travel', 'Utilities', 'Foreign Currency', 'Retail/General'],
         requiresSelection: false,
         desc: 'Unlimited flat-rate 1.6% cashback on all spending. No minimum spend.',
@@ -262,6 +262,17 @@
         briefGuide: 'Requires S$500 monthly spend. Earns 8% cashback on foreign currency transactions, up to a maximum cashback cap of S$50 monthly.'
       }
     ];
+
+    const QUICK_MERCHANTS = [
+      { name: 'Sheng Siong / FairPrice', category: 'Groceries', currency: 'SGD', amount: '50.00', isOnline: false, icon: 'shopping-cart' },
+      { name: 'Grab Ride / SimplyGo MRT', category: 'Transport/SimplyGo', currency: 'SGD', amount: '12.00', isOnline: true, icon: 'car' },
+      { name: 'Shopee / Lazada Checkout', category: 'Online Shopping', currency: 'SGD', amount: '80.00', isOnline: true, icon: 'laptop' },
+      { name: 'SP Utilities SP Group', category: 'Utilities', currency: 'SGD', amount: '120.00', isOnline: true, icon: 'zap', isExclusionRisk: true },
+      { name: 'Cafe / Hawker Dining', category: 'Dining', currency: 'SGD', amount: '25.00', isOnline: false, icon: 'utensils' },
+      { name: 'JB Shopping Run', category: 'Foreign Currency', currency: 'MYR', amount: '150.00', isOnline: false, icon: 'globe' }
+    ];
+
+    const EXCLUSION_LIST_CATEGORIES = ['Utilities', 'Retail/General'];
 
     const TRANSACTION_CATEGORIES = [
       'Dining', 'Groceries', 'Online Shopping', 'Transport/SimplyGo', 'Travel', 'Utilities', 'Foreign Currency', 'Retail/General'
@@ -297,6 +308,8 @@
       const [txDate, setTxDate] = useState(new Date().toISOString().split('T')[0]);
       const [txEditingId, setTxEditingId] = useState(null);
 
+      const [openAccordionCard, setOpenAccordionCard] = useState(null);
+
       const [confirmModal, setConfirmModal] = useState({
         isOpen: false,
         title: '',
@@ -328,13 +341,13 @@
           }
         }, 150);
         return () => clearTimeout(timer);
-      }, [user, activeTab, isAddingCard, isLoggingTx, transactions, wallet]);
+      }, [user, activeTab, isAddingCard, isLoggingTx, transactions, wallet, openAccordionCard]);
 
       useEffect(() => {
         if (!isFirebaseConfigured) {
           setUser({
             uid: 'dev-user-123',
-            displayName: 'SG Hacker',
+            displayName: 'SG Optimizer',
             email: 'optimizer@swipewise.sg',
             photoURL: 'https://placehold.co/100x100/10b981/020617?text=SG'
           });
@@ -705,7 +718,7 @@
               rate = 0.3;
               notes = `HSBC Live+ requires S$600 min monthly spend. Currently S$${currentTotalSpend.toFixed(0)} logged. Base 0.3% applies.`;
             } else if (['Dining', 'Online Shopping', 'Retail/General'].includes(calcCategory)) {
-              const maxMonthlyCapSpend = 1041.67; // ~$83.33 monthly cap equivalent
+              const maxMonthlyCapSpend = 1041.67; 
               if (currentTotalSpend >= maxMonthlyCapSpend) {
                 rate = 0.3;
                 notes = `S$83.33 monthly bonus threshold met. Spillover earns base rate 0.3%.`;
@@ -755,7 +768,6 @@
               rate = 0.3;
               notes = `UOB Evol requires S$600 min monthly spend. Currently S$${currentTotalSpend.toFixed(0)}. Base 0.3% applies.`;
             } else if (isOnlineOrContactless) {
-              // Online category transactions
               const catTxs = cardTxs.filter(t => t.category === 'Online Shopping');
               const catSpend = catTxs.reduce((sum, t) => sum + t.amountSGD, 0);
 
@@ -788,16 +800,16 @@
               notes = `Citi Cash Back requires S$800 min monthly spend. Currently S$${currentTotalSpend.toFixed(0)}. Base 0.25% applies.`;
             } else if (isGroceriesOrDining || isPetrol) {
               const targetBonusRate = isPetrol ? 8.0 : 6.0;
-              const capSpendLimit = isPetrol ? 312.50 : 416.67; // S$25 cap limit equivalent
+              const cbLimit = isPetrol ? 312.50 : 416.67; 
 
               const catTxs = cardTxs.filter(t => t.category === calcCategory);
               const catSpend = catTxs.reduce((sum, t) => sum + t.amountSGD, 0);
 
-              if (catSpend >= capSpendLimit) {
+              if (catSpend >= cbLimit) {
                 rate = 0.25;
                 notes = `S$25 category cashback cap reached. Base 0.25% applies.`;
               } else {
-                const remainingLimit = Math.max(0, capSpendLimit - catSpend);
+                const remainingLimit = Math.max(0, cbLimit - catSpend);
                 if (targetAmtSGD <= remainingLimit) {
                   rate = targetBonusRate;
                   notes = `Unlocks ${targetBonusRate}% cashback. Headroom: S$${remainingLimit.toFixed(0)}.`;
@@ -848,9 +860,8 @@
 
             if (prospectiveTotal < 800) {
               rate = 0.3;
-              notes = `OCBC 365 requires S$800 min monthly spend. Currently S$${currentTotalSpend.toFixed(0)}. Base 0.3% applies.`;
+              notes = `OCBC 365 requires S$800 min monthly spend. Currently S$${currentTotalSpend.toFixed(0)} logged. Base 0.3% applies.`;
             } else if (catRate) {
-              // Checked against global cashback cap of S$80
               const currentCashback = cardTxs.reduce((sum, t) => {
                 const tRate = categoryRates[t.category] || 0.3;
                 return sum + (t.amountSGD * (tRate / 100));
@@ -922,6 +933,7 @@
             ...card,
             calculatedRate: rate,
             calculatedType: rateType,
+            currentTotalSpend,
             notes
           };
         });
@@ -939,6 +951,18 @@
         setIsLoggingTx(true);
         showToast("Transferred to Ledger Form!");
       };
+
+      const handleQuickSwipe = (item) => {
+        setCalcCategory(item.category);
+        setCalcCurrency(item.currency);
+        setCalcAmount(item.amount);
+        setCalcIsOnline(item.isOnline);
+        showToast(`Estimating spend for ${item.name}!`);
+      };
+
+      const isCurrentExclusionRisk = useMemo(() => {
+        return EXCLUSION_LIST_CATEGORIES.includes(calcCategory);
+      }, [calcCategory]);
 
       if (loading) {
         return (
@@ -1015,9 +1039,36 @@
               </div>
             ) : (
               <>
-                {/* TAB 1: YIELD CALCULATOR ENGINE */}
+                {/* TAB 1: SWIPE GUIDE (FORMERLY HOME) */}
                 {activeTab === 'home' && (
                   <div className="space-y-5 animate-fadeIn">
+                    
+                    {/* QUICK-SWIPE MERCHANT SHORTCUTS */}
+                    <div className="bg-brand-card/40 border border-slate-850 p-4 rounded-2xl">
+                      <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2.5 flex items-center gap-1">
+                        <i data-lucide="star" className="w-3.5 h-3.5 text-brand-gold"></i>
+                        Quick-Swipe Shortcuts
+                      </h4>
+                      <div className="grid grid-cols-2 gap-2">
+                        {QUICK_MERCHANTS.map((item, idx) => (
+                          <button
+                            key={idx}
+                            onClick={() => handleQuickSwipe(item)}
+                            className="flex items-center gap-2 bg-slate-900/60 border border-slate-800 hover:border-brand-accent/40 rounded-xl p-2.5 text-left transition"
+                          >
+                            <span className="p-1.5 bg-slate-800 rounded-lg text-slate-300">
+                              <i data-lucide={item.icon || 'tag'} className="w-3.5 h-3.5"></i>
+                            </span>
+                            <div className="min-w-0">
+                              <p className="text-[10px] font-bold text-slate-200 truncate">{item.name}</p>
+                              <p className="text-[8px] text-slate-500 truncate">{item.category} &bull; {item.currency} {item.amount}</p>
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* ESTIMATOR FORM */}
                     <div className="bg-brand-card/60 backdrop-blur border border-slate-800 rounded-2xl p-4 shadow-xl">
                       <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3 flex items-center gap-1.5">
                         <i data-lucide="calculator" className="w-4 h-4 text-brand-accent"></i>
@@ -1075,6 +1126,19 @@
                           />
                         </div>
                       </div>
+
+                      {/* S$0 REWARD / EXCLUSION ALERT WARNING BANNER */}
+                      {isCurrentExclusionRisk && (
+                        <div className="mt-3.5 p-3 rounded-xl bg-brand-red/10 border border-brand-red/30 flex items-start gap-2 animate-pulse">
+                          <i data-lucide="alert-octagon" className="w-4 h-4 text-brand-red shrink-0 mt-0.5"></i>
+                          <div>
+                            <h4 className="text-[10px] font-bold text-slate-200">Exclusion Risk Alert (S$0 Reward Danger)</h4>
+                            <p className="text-[9px] text-slate-400 leading-relaxed mt-0.5">
+                              Most Singaporean cards explicitly yield **zero rewards** on utilities, insurance, educational institutes, SP Group bills, and top-ups.
+                            </p>
+                          </div>
+                        </div>
+                      )}
                     </div>
 
                     <div className="space-y-3">
@@ -1091,61 +1155,80 @@
                           </button>
                         </div>
                       ) : (
-                        sortedYieldRecommendations.map((rec, index) => (
-                          <div 
-                            key={rec.docId}
-                            className={`border rounded-2xl p-4 relative overflow-hidden transition-all duration-200 ${
-                              index === 0 
-                                ? 'bg-gradient-to-br from-slate-900 via-emerald-950/40 to-slate-900 border-brand-accent shadow-lg shadow-brand-accent/10' 
-                                : 'bg-brand-card/40 border-slate-800'
-                            }`}
-                          >
-                            {index === 0 && (
-                              <div className="absolute top-0 right-0 bg-brand-accent text-brand-dark text-[8px] font-extrabold px-3 py-1 rounded-bl-xl tracking-wider uppercase">
-                                Best Choice
-                              </div>
-                            )}
+                        sortedYieldRecommendations.map((rec, index) => {
+                          const customCap = rec.customCap || rec.globalCap;
+                          const capPercentage = Math.min((rec.currentTotalSpend / customCap) * 100, 100);
 
-                            <div className="flex justify-between items-start mb-2">
-                              <div>
-                                <h4 className="text-sm font-bold text-white">{rec.name}</h4>
-                                <p className="text-[10px] text-slate-400">{rec.issuer} &bull; Bill Cycle Day: {rec.billingCycleDate}</p>
+                          return (
+                            <div 
+                              key={rec.docId}
+                              className={`border rounded-2xl p-4 relative overflow-hidden transition-all duration-200 ${
+                                index === 0 
+                                  ? 'bg-gradient-to-br from-slate-900 via-emerald-950/40 to-slate-900 border-brand-accent shadow-lg shadow-brand-accent/10' 
+                                  : 'bg-brand-card/40 border-slate-800'
+                              }`}
+                            >
+                              {index === 0 && (
+                                <div className="absolute top-0 right-0 bg-brand-accent text-brand-dark text-[8px] font-extrabold px-3 py-1 rounded-bl-xl tracking-wider uppercase">
+                                  Best Choice
+                                </div>
+                              )}
+
+                              <div className="flex justify-between items-start mb-2">
+                                <div>
+                                  <h4 className="text-sm font-bold text-white">{rec.name}</h4>
+                                  <p className="text-[10px] text-slate-400">{rec.issuer} &bull; Bill Cycle Day: {rec.billingCycleDate}</p>
+                                </div>
+                                <div className="text-right">
+                                  <span className={`text-sm font-black ${rec.calculatedType === 'Miles' ? 'text-brand-gold' : 'text-brand-accent'}`}>
+                                    {rec.calculatedRate} {rec.calculatedType === 'Miles' ? 'MPD' : '% Cashback'}
+                                  </span>
+                                </div>
                               </div>
-                              <div className="text-right">
-                                <span className={`text-sm font-black ${rec.calculatedType === 'Miles' ? 'text-brand-gold' : 'text-brand-accent'}`}>
-                                  {rec.calculatedRate} {rec.calculatedType === 'Miles' ? 'MPD' : '% Cashback'}
-                                </span>
+
+                              {/* VISUAL CAPPING PROGRESS BAR ON RECOMMENDATIONS CARD */}
+                              <div className="mt-2.5 mb-1 bg-slate-950/80 p-2 rounded-lg border border-slate-850">
+                                <div className="flex justify-between text-[9px] text-slate-400 mb-1">
+                                  <span>Monthly Limit Consumption</span>
+                                  <span>S$ {rec.currentTotalSpend.toFixed(0)} / S$ {customCap}</span>
+                                </div>
+                                <div className="w-full bg-slate-900 h-1.5 rounded-full overflow-hidden">
+                                  <div 
+                                    className={`h-full ${capPercentage >= 100 ? 'bg-brand-red' : rec.calculatedType === 'Miles' ? 'bg-brand-gold' : 'bg-brand-accent'}`}
+                                    style={{ width: `${capPercentage}%` }}
+                                  ></div>
+                                </div>
+                              </div>
+
+                              <p className="text-xs text-slate-300 mt-2 bg-slate-900/60 p-2.5 rounded-lg border border-slate-800/80">
+                                {rec.notes}
+                              </p>
+
+                              <div className="mt-3 flex justify-between items-center pt-2 border-t border-slate-800/60">
+                                <span className="text-[10px] text-slate-500">Cycle calculations active</span>
+                                <button 
+                                  onClick={() => handleFastLog(rec)}
+                                  className="flex items-center gap-1 bg-brand-accent text-brand-dark text-[10px] font-extrabold px-3 py-1.5 rounded-lg hover:scale-105 transition duration-150"
+                                >
+                                  <i data-lucide="receipt" className="w-3 h-3"></i>
+                                  Log spend to Card
+                                </button>
                               </div>
                             </div>
-
-                            <p className="text-xs text-slate-300 mt-2 bg-slate-900/60 p-2.5 rounded-lg border border-slate-800/80">
-                              {rec.notes}
-                            </p>
-
-                            <div className="mt-3 flex justify-between items-center pt-2 border-t border-slate-800/60">
-                              <span className="text-[10px] text-slate-500">Includes live Cap logic</span>
-                              <button 
-                                onClick={() => handleFastLog(rec)}
-                                className="flex items-center gap-1 bg-brand-accent text-brand-dark text-[10px] font-extrabold px-3 py-1.5 rounded-lg hover:scale-105 transition duration-150"
-                              >
-                                <i data-lucide="receipt" className="w-3 h-3"></i>
-                                Log spend to Card
-                              </button>
-                            </div>
-                          </div>
-                        ))
+                          );
+                        })
                       )}
                     </div>
                   </div>
                 )}
 
-                {/* TAB 2: WALLET CONFIGURATION */}
+                {/* TAB 2: MY WALLET (FORMERLY WALLET) */}
                 {activeTab === 'wallet' && (
                   <div className="space-y-4 animate-fadeIn">
                     <div className="flex items-center justify-between">
                       <div>
                         <h2 className="text-md font-bold text-white">My Smart Wallet</h2>
-                        <p className="text-xs text-slate-400">Configure and link Singapore cards.</p>
+                        <p className="text-xs text-slate-400">Configure active templates and whitelists.</p>
                       </div>
                       <button 
                         onClick={() => setIsAddingCard(true)}
@@ -1165,62 +1248,89 @@
                           </button>
                         </div>
                       ) : (
-                        wallet.map(card => (
-                          <div key={card.docId} className="bg-brand-card/60 backdrop-blur border border-slate-800 rounded-2xl p-4 shadow-md">
-                            <div className="flex justify-between items-start mb-2">
-                              <div>
-                                <span className="text-[9px] uppercase font-bold text-brand-accent bg-brand-accent/10 px-2 py-0.5 rounded-full">
-                                  {card.type} Card
-                                </span>
-                                <h3 className="text-sm font-bold text-white mt-1">{card.name}</h3>
-                                <p className="text-[10px] text-slate-400">Issuer: {card.issuer} &bull; Statement Date: {card.billingCycleDate}</p>
-                              </div>
-                              <div className="flex gap-2">
-                                <button 
-                                  onClick={() => {
-                                    setEditingCardInstanceId(card.docId);
-                                    const orig = PRESET_CARDS.find(p => p.id === card.templateId);
-                                    setConfigCardTemplate(orig);
-                                    setConfigCategories(card.selectedCategories || []);
-                                    setConfigBillingCycle(card.billingCycleDate);
-                                    setConfigCustomCap(card.customCap || '');
-                                    setIsAddingCard(true);
-                                  }}
-                                  className="p-1 text-slate-400 hover:text-white"
-                                >
-                                  <i data-lucide="edit-3" className="w-4 h-4"></i>
-                                </button>
-                                <button 
-                                  onClick={() => handleRemoveCard(card.docId)}
-                                  className="p-1 text-slate-400 hover:text-brand-red"
-                                >
-                                  <i data-lucide="trash-2" className="w-4 h-4"></i>
-                                </button>
-                              </div>
-                            </div>
+                        wallet.map(card => {
+                          const preset = PRESET_CARDS.find(p => p.id === card.templateId);
+                          const isAccordionOpen = openAccordionCard === card.docId;
 
-                            {card.selectedCategories && card.selectedCategories.length > 0 && (
-                              <div className="mt-2.5 flex flex-wrap gap-1.5">
-                                {card.selectedCategories.map(cat => (
-                                  <span key={cat} className="text-[9px] bg-slate-900 border border-slate-800 text-slate-300 px-2 py-0.5 rounded-md">
-                                    {cat}
+                          return (
+                            <div key={card.docId} className="bg-brand-card/60 backdrop-blur border border-slate-800 rounded-2xl p-4 shadow-md space-y-3">
+                              <div className="flex justify-between items-start">
+                                <div>
+                                  <span className="text-[9px] uppercase font-bold text-brand-accent bg-brand-accent/10 px-2 py-0.5 rounded-full">
+                                    {card.type} Card
                                   </span>
-                                ))}
+                                  <h3 className="text-sm font-bold text-white mt-1">{card.name}</h3>
+                                  <p className="text-[10px] text-slate-400">Issuer: {card.issuer} &bull; Statement Date: {card.billingCycleDate}</p>
+                                </div>
+                                <div className="flex gap-2">
+                                  <button 
+                                    onClick={() => {
+                                      setEditingCardInstanceId(card.docId);
+                                      const orig = PRESET_CARDS.find(p => p.id === card.templateId);
+                                      setConfigCardTemplate(orig);
+                                      setConfigCategories(card.selectedCategories || []);
+                                      setConfigBillingCycle(card.billingCycleDate);
+                                      setConfigCustomCap(card.customCap || '');
+                                      setIsAddingCard(true);
+                                    }}
+                                    className="p-1 text-slate-400 hover:text-white"
+                                  >
+                                    <i data-lucide="edit-3" className="w-4 h-4"></i>
+                                  </button>
+                                  <button 
+                                    onClick={() => handleRemoveCard(card.docId)}
+                                    className="p-1 text-slate-400 hover:text-brand-red"
+                                  >
+                                    <i data-lucide="trash-2" className="w-4 h-4"></i>
+                                  </button>
+                                </div>
                               </div>
-                            )}
-                          </div>
-                        ))
+
+                              {card.selectedCategories && card.selectedCategories.length > 0 && (
+                                <div className="flex flex-wrap gap-1.5">
+                                  {card.selectedCategories.map(cat => (
+                                    <span key={cat} className="text-[9px] bg-slate-900 border border-slate-800 text-slate-300 px-2 py-0.5 rounded-md">
+                                      {cat}
+                                    </span>
+                                  ))}
+                                </div>
+                              )}
+
+                              {/* ACCORDION BRIEFS: INTEGRATING CARD TERMS DIRECTLY */}
+                              {preset && (
+                                <div className="pt-2 border-t border-slate-800/60">
+                                  <button 
+                                    onClick={() => setOpenAccordionCard(isAccordionOpen ? null : card.docId)}
+                                    className="w-full flex items-center justify-between text-left text-xs font-bold text-slate-300 hover:text-white"
+                                  >
+                                    <span className="flex items-center gap-1.5 text-[11px]">
+                                      <i data-lucide="book-open" className="w-3.5 h-3.5 text-brand-gold"></i>
+                                      Benefit Requirements & Guides
+                                    </span>
+                                    <i data-lucide={isAccordionOpen ? "chevron-up" : "chevron-down"} className="w-4 h-4"></i>
+                                  </button>
+                                  
+                                  {isAccordionOpen && (
+                                    <div className="mt-2.5 bg-slate-900 p-3 rounded-xl border border-slate-800 text-[10px] text-slate-400 leading-relaxed space-y-1.5 animate-fadeIn">
+                                      <p>{preset.briefGuide}</p>
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })
                       )}
                     </div>
                   </div>
                 )}
 
-                {/* TAB 3: SMART PROGRESS METRICS & TERMS */}
+                {/* TAB 3: CAP TRACKER (FORMERLY ANALYSIS) */}
                 {activeTab === 'analysis' && (
                   <div className="space-y-5 animate-fadeIn">
                     <div>
-                      <h2 className="text-md font-bold text-white">Spend Gate Analysis & Card Briefs</h2>
-                      <p className="text-xs text-slate-400">Statement cycle progress tracking and eligibility guidelines.</p>
+                      <h2 className="text-md font-bold text-white">Cap & Cycle Tracker</h2>
+                      <p className="text-xs text-slate-400">Statement cycle spending progress against card caps.</p>
                     </div>
 
                     {wallet.length === 0 ? (
@@ -1232,20 +1342,21 @@
                         const cardTxs = getTransactionsForCardCycle(card, transactions);
                         const totalSpend = cardTxs.reduce((sum, t) => sum + t.amountSGD, 0);
                         const preset = PRESET_CARDS.find(p => p.id === card.templateId);
+                        const transactionCount = cardTxs.length;
 
                         return (
                           <div key={card.docId} className="bg-brand-card/60 border border-slate-800 rounded-2xl p-4 space-y-4 shadow-sm">
                             <div className="flex justify-between items-start">
                               <div>
                                 <h3 className="text-xs font-bold text-white">{card.name}</h3>
-                                <p className="text-[9px] text-slate-500">Custom Statement Period Spending</p>
+                                <p className="text-[9px] text-slate-500">Current Statement Period Cumulative Spend</p>
                               </div>
                               <span className="text-xs font-bold text-slate-300">
                                 S$ {totalSpend.toFixed(0)} / S$ {card.customCap || card.globalCap}
                               </span>
                             </div>
 
-                            {/* AUTOMATED COMPLIANCE WATERFALL PROGRESS INDICATORS */}
+                            {/* COMPLIANCE WATERFALL PROGRESS INDICATORS */}
                             {card.templateId === 'maybank-ff' && (
                               <div className="space-y-3">
                                 <div className="space-y-1">
@@ -1281,6 +1392,7 @@
                               </div>
                             )}
 
+                            {/* UOB ONE TRANSACTION COUNT GATE INDICATOR */}
                             {card.templateId === 'uob-one' && (
                               <div className="space-y-3">
                                 <div className="space-y-1">
@@ -1295,6 +1407,27 @@
                                     ></div>
                                   </div>
                                 </div>
+
+                                <div className="space-y-1 bg-slate-900/60 p-2.5 rounded-xl border border-slate-800">
+                                  <div className="flex justify-between text-[10px] text-slate-400 mb-1">
+                                    <span className="flex items-center gap-1">
+                                      <i data-lucide="hash" className="w-3.5 h-3.5 text-brand-gold"></i>
+                                      Tx Count Goal (Min 5 Txs)
+                                    </span>
+                                    <span>{transactionCount} / 5 Txs</span>
+                                  </div>
+                                  <div className="w-full bg-slate-950 h-2 rounded-full overflow-hidden">
+                                    <div 
+                                      className={`h-full ${transactionCount >= 5 ? 'bg-brand-accent' : 'bg-brand-gold'}`}
+                                      style={{ width: `${Math.min((transactionCount/5)*100, 100)}%` }}
+                                    ></div>
+                                  </div>
+                                  {transactionCount < 5 && (
+                                    <p className="text-[8px] text-brand-gold/80 leading-relaxed mt-1">
+                                      ⚠️ Under 5 transactions logged. The high reward rates will not trigger unless you log {5 - transactionCount} more purchases.
+                                    </p>
+                                  )}
+                                </div>
                               </div>
                             )}
 
@@ -1308,19 +1441,6 @@
                                 </div>
                               </div>
                             )}
-
-                            {/* BENEFITS BRIEF ACCORDION */}
-                            {preset && (
-                              <div className="mt-3 pt-3 border-t border-slate-800/60 bg-slate-900/40 p-3 rounded-xl border border-slate-800">
-                                <h4 className="text-[11px] font-bold text-slate-300 flex items-center gap-1 mb-1.5">
-                                  <i data-lucide="help-circle" className="w-3.5 h-3.5 text-brand-accent"></i>
-                                  How to maximize benefits:
-                                </h4>
-                                <p className="text-[10px] text-slate-400 leading-relaxed">
-                                  {preset.briefGuide}
-                                </p>
-                              </div>
-                            )}
                           </div>
                         );
                       })
@@ -1328,13 +1448,13 @@
                   </div>
                 )}
 
-                {/* TAB 4: TRANSACTION LEDGER FORM & HISTORY */}
+                {/* TAB 4: SPEND LEDGER (FORMERLY LOG SLIP) */}
                 {activeTab === 'logs' && (
                   <div className="space-y-4 animate-fadeIn">
                     <div className="flex items-center justify-between">
                       <div>
-                        <h2 className="text-md font-bold text-white">Hustle Ledger</h2>
-                        <p className="text-xs text-slate-400">Log and modify expenditures seamlessly.</p>
+                        <h2 className="text-md font-bold text-white">Spend Ledger</h2>
+                        <p className="text-xs text-slate-400">Log and manage your physical receipts.</p>
                       </div>
                       <button 
                         onClick={() => {
@@ -1654,7 +1774,7 @@
             </div>
           )}
 
-          {/* MOBILE PHONE SAFE BOTTOM NAVIGATION BAR */}
+          {/* MOBILE PHONE SAFE BOTTOM NAVIGATION BAR - UPDATED LAYOUT */}
           <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md bg-brand-dark/90 backdrop-blur-md border-t border-slate-850 z-40 px-3 py-2 flex justify-around">
             <button 
               onClick={() => setActiveTab('home')}
@@ -1663,7 +1783,7 @@
               }`}
             >
               <i data-lucide="zap" className="w-5 h-5"></i>
-              <span className="text-[9px] font-bold">Optimizer</span>
+              <span className="text-[9px] font-bold">Swipe Guide</span>
             </button>
             <button 
               onClick={() => setActiveTab('wallet')}
@@ -1672,7 +1792,7 @@
               }`}
             >
               <i data-lucide="wallet" className="w-5 h-5"></i>
-              <span className="text-[9px] font-bold">My Cards</span>
+              <span className="text-[9px] font-bold">My Wallet</span>
             </button>
             <button 
               onClick={() => setActiveTab('analysis')}
@@ -1681,7 +1801,7 @@
               }`}
             >
               <i data-lucide="line-chart" className="w-5 h-5"></i>
-              <span className="text-[9px] font-bold">Analysis</span>
+              <span className="text-[9px] font-bold">Cap Tracker</span>
             </button>
             <button 
               onClick={() => setActiveTab('logs')}
@@ -1690,7 +1810,7 @@
               }`}
             >
               <i data-lucide="receipt" className="w-5 h-5"></i>
-              <span className="text-[9px] font-bold">Log Slip</span>
+              <span className="text-[9px] font-bold">Spend Ledger</span>
             </button>
           </nav>
 
