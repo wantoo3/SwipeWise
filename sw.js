@@ -260,6 +260,16 @@
         };
       }, []);
 
+      // Dynamic Lucide Icon Refresh Compiler
+      useEffect(() => {
+        const timer = setTimeout(() => {
+          if (typeof lucide !== 'undefined') {
+            lucide.createIcons();
+          }
+        }, 120);
+        return () => clearTimeout(timer);
+      }, [user, activeTab, isAddingCard, isLoggingTx, transactions, wallet]);
+
       // Sign-in Status Monitor
       useEffect(() => {
         if (!isFirebaseConfigured) {
@@ -321,16 +331,29 @@
         setTimeout(() => setFeedbackMsg(null), 4000);
       };
 
-      // Handle Authentication triggers
+      // Handle Authentication triggers with immediate state updates
       const handleGoogleLogin = async () => {
         if (!isFirebaseConfigured) {
+          setUser({
+            uid: 'dev-user-123',
+            displayName: 'Ah Xi',
+            email: 'ahxi@swipewise.sg',
+            photoURL: 'https://placehold.co/100x100/10b981/020617?text=AX'
+          });
           showToast("Local Sandbox Mode Active");
           return;
         }
         try {
-          await auth.signInWithPopup(googleProvider);
+          setLoading(true);
+          const result = await auth.signInWithPopup(googleProvider);
+          if (result && result.user) {
+            setUser(result.user);
+            showToast("Authenticated successfully!");
+          }
         } catch (err) {
           showToast("Auth failed: " + err.message);
+        } finally {
+          setLoading(false);
         }
       };
 
@@ -339,7 +362,15 @@
           setUser(null);
           return;
         }
-        await auth.signOut();
+        setLoading(true);
+        try {
+          await auth.signOut();
+          setUser(null);
+        } catch (err) {
+          showToast("Logout error: " + err.message);
+        } finally {
+          setLoading(false);
+        }
       };
 
       // Exchange Conversion Utilities
@@ -723,21 +754,21 @@
         showToast("Logged directly from optimizer recommendations!");
       };
 
+      // Loading Splash screen to prevent black screens during session checks
+      if (loading) {
+        return (
+          <div className="max-w-md mx-auto bg-brand-dark min-h-screen flex flex-col items-center justify-center p-6 text-center">
+            <div className="w-12 h-12 rounded-full border-4 border-slate-800 border-t-brand-accent animate-spin mb-4"></div>
+            <h3 className="text-sm font-bold text-white tracking-wide">Securing Connection</h3>
+            <p className="text-xs text-slate-500 mt-1">Please wait while SwipeWise syncs authentication tokens...</p>
+          </div>
+        );
+      }
+
       return (
         <div className="max-w-md mx-auto bg-brand-dark min-h-screen shadow-2xl relative flex flex-col">
           
-          {}
-          <header className="sticky top-0 z-40 bg-brand-dark/80 backdrop-blur-md border-b border-slate-800/80 px-4 py-3 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <span className="p-1.5 bg-brand-accent/20 rounded-lg text-brand-accent">
-                <i data-lucide="zap" className="w-5 h-5"></i>
-              </span>
-              <div>
-                <h1 className="text-lg font-extrabold tracking-tight text-white flex items-center gap-1.5">
-                  SwipeWise
-                  <span className="text-[10px] uppercase font-bold tracking-widest bg-brand-accent/20 text-brand-accent px-1.5 py-0.5 rounded-full">SG</span>
-                </h1>
-                <p className="text-[10px] text-slate-400">Singapore Reward Maximizer</p>
+          {/* HEADER BAR */}
               </div>
             </div>
 
@@ -1477,10 +1508,6 @@
     window.onload = function() {
       const root = ReactDOM.createRoot(document.getElementById('root'));
       root.render(<App />);
-
-      setTimeout(() => {
-        lucide.createIcons();
-      }, 500);
 
       if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('./sw.js')
